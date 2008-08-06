@@ -6,7 +6,7 @@ Red is a Ruby-to-JavaScript transliterator using ParseTree.
 
 (The MIT License)
 
-Copyright (c) 2008 FIXME full name
+Copyright (c) 2008 Jesse Sielaff
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
