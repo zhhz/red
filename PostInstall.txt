@@ -1,2 +1,2 @@
 
-For more information on red, see http://groups.google.com/group/ruby-red-js
+For more information on red, see http://github.com/jessesielaff/red/wikis
