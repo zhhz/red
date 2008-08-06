@@ -19,6 +19,12 @@ module Red
       exit
     end
     
+    def direct_translate(string)
+      js_output = hush_warnings { string.string_to_node }.compile_node
+      print_js(js_output, 'test')
+      exit
+    end
+    
     def hush_warnings
       $stderr = File.open('spew', 'w')
       output = yield

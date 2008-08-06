@@ -31,14 +31,21 @@ Options are:
   opts.separator ""
   opts.on("-h", "--help", "Show this help message.") { puts opts; exit }
   opts.on("-r", "--rails", "Adds Red plugin to ./vendor/plugins") { build_red_plugin_for_rails }
-  opts.parse!(ARGV)
+  opts.on("-s", "--string=RUBY_STRING", "Translate a single string to JavaScript") { |string| direct_translate(string) }
+  begin
+    opts.parse!(ARGV)
+  rescue OptionParser::InvalidOption => e
+    puts "You used an #{e.message}."
+    puts "Use red -h for help."
+    exit
+  end
 end
 
 if filename = ARGV[0]
   self.compile_red_to_js(filename)
 else
   puts <<-USAGE
-Usage: red <filename>
+Usage: red [filename] [options]
 
 Use red -h for help.
   USAGE

@@ -1,3 +1,11 @@
+== 3.1.1 2008-08-06
+
+* 1 major enhancement:
+  * Added -s option to allow conversion of Ruby strings from the command line
+
+* 1 bug fix:
+  * Rescued the error thrown when using an unknown option flag.
+
 == 3.1.0 2008-08-06
 
 * 1 major enhancement:
@@ -7,3 +15,16 @@
 
 * 1 major enhancement:
   * Initial Rubyforge release
+
+== 2.0.0 2008-07-13
+
+* 1 major enhancement:
+  * Version 2 stable
+
+* 1 bug fix:
+  * Removed buggy whitespace
+
+== 1.0.0 2008-07-04
+
+* 1 major enhancement:
+  * Stable working prototype
