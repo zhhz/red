@@ -1,0 +1,45 @@
+#!/usr/bin/env ruby
+# Red's command line transliterator executable.
+# 
+# Created on 2008-8-6.
+# Copyright (c) 2008. All rights reserved.
+
+begin
+  require 'rubygems'
+rescue LoadError
+  # no rubygems to load, so we fail silently
+end
+
+require 'red'
+require 'optparse'
+
+include Red, Red::Executable
+
+OPTIONS = { :rails => false }
+
+parser = OptionParser.new do |opts|
+  opts.banner = <<-BANNER
+Usage: red [filename] [options]
+
+Description:
+  Red is a Ruby-to-JavaScript transliterator.
+  
+  For more information see http://github.com/jessesielaff/red/wikis
+
+Options are:
+  BANNER
+  opts.separator ""
+  opts.on("-h", "--help", "Show this help message.") { puts opts; exit }
+  opts.on("-r", "--rails", "Adds Red plugin to ./vendor/plugins") { build_red_plugin_for_rails }
+  opts.parse!(ARGV)
+end
+
+if filename = ARGV[0]
+  self.compile_red_to_js(filename)
+else
+  puts <<-USAGE
+Usage: red <filename>
+
+Use red -h for help.
+  USAGE
+end

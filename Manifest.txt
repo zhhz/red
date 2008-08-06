@@ -4,6 +4,7 @@ Manifest.txt
 PostInstall.txt
 README.txt
 Rakefile
+bin/red
 config/hoe.rb
 config/requirements.rb
 lib/red.rb
@@ -16,6 +17,7 @@ lib/red/control_nodes.rb
 lib/red/data_nodes.rb
 lib/red/definition_nodes.rb
 lib/red/errors.rb
+lib/red/executable.rb
 lib/red/illegal_nodes.rb
 lib/red/literal_nodes.rb
 lib/red/variable_nodes.rb
@@ -31,7 +33,6 @@ spec/spec.opts
 spec/spec_helper.rb
 tasks/deployment.rake
 tasks/environment.rake
-tasks/red.rake
 tasks/rspec.rake
 tasks/website.rake
 website/index.html

@@ -2,19 +2,20 @@ $:.unshift(File.dirname(__FILE__)) unless
   $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
 
 require 'parse_tree'
-require 'lib/red/assignment_nodes'
-require 'lib/red/call_nodes'
-require 'lib/red/conditional_nodes'
-require 'lib/red/conjunction_nodes'
-require 'lib/red/constant_nodes'
-require 'lib/red/control_nodes'
-require 'lib/red/data_nodes'
-require 'lib/red/definition_nodes'
-require 'lib/red/errors'
-require 'lib/red/illegal_nodes'
-require 'lib/red/literal_nodes'
-require 'lib/red/variable_nodes'
-require 'lib/red/wrap_nodes'
+require 'red/assignment_nodes'
+require 'red/call_nodes'
+require 'red/conditional_nodes'
+require 'red/conjunction_nodes'
+require 'red/constant_nodes'
+require 'red/control_nodes'
+require 'red/data_nodes'
+require 'red/definition_nodes'
+require 'red/errors'
+require 'red/executable'
+require 'red/illegal_nodes'
+require 'red/literal_nodes'
+require 'red/variable_nodes'
+require 'red/wrap_nodes'
 
 module Red
   @@red_library = nil
