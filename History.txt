@@ -1,3 +1,9 @@
+== 3.1.2 2008-08-06
+
+* 2 bug fixes:
+  * Added gem dependency for ParseTree.
+  * Rescued the error thrown when no argument is given for -s option flag.
+
 == 3.1.1 2008-08-06
 
 * 1 major enhancement:

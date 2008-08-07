@@ -2,13 +2,13 @@ require 'red/version'
 
 AUTHOR = 'Jesse Sielaff'
 EMAIL = "jesse.sielaff@gmail.com"
-DESCRIPTION = "A Ruby-to-JavaScript transliterator using ParseTree."
+DESCRIPTION = "Red is a Ruby-to-JavaScript transliterator using ParseTree."
 GEM_NAME = 'red'
 RUBYFORGE_PROJECT = 'red-js'
 HOMEPATH = "http://#{RUBYFORGE_PROJECT}.rubyforge.org"
 DOWNLOAD_PATH = "http://rubyforge.org/projects/#{RUBYFORGE_PROJECT}"
 EXTRA_DEPENDENCIES = [
-  ['parse_tree', '>= 2.2.0'],
+  ['ParseTree', '>= 2.2.0'],
   ['rake', '>= 0.8.1']
 ]
 
@@ -62,10 +62,10 @@ $hoe = Hoe.new(GEM_NAME, VERS) do |p|
 
   # == Optional
   p.changes = p.paragraphs_of("History.txt", 0..1).join("\n\n")
-  #p.extra_deps = EXTRA_DEPENDENCIES
+  p.extra_deps = EXTRA_DEPENDENCIES
 
-    #p.spec_extras = {}    # A hash of extra values to set in the gemspec.
-  end
+  #p.spec_extras = {}    # A hash of extra values to set in the gemspec.
+end
 
 CHANGES = $hoe.paragraphs_of('History.txt', 0..1).join("\\n\\n")
 PATH    = (RUBYFORGE_PROJECT == GEM_NAME) ? RUBYFORGE_PROJECT : "#{RUBYFORGE_PROJECT}/#{GEM_NAME}"

@@ -1,8 +1,7 @@
 #!/usr/bin/env ruby
 # Red's command line transliterator executable.
 # 
-# Created on 2008-8-6.
-# Copyright (c) 2008. All rights reserved.
+# Copyright (c) 2008 Jesse Sielaff.
 
 begin
   require 'rubygems'
@@ -11,42 +10,33 @@ rescue LoadError
 end
 
 require 'red'
+require 'red/executable'
+require 'red/messages'
+require 'red/version'
 require 'optparse'
 
-include Red, Red::Executable
-
-OPTIONS = { :rails => false }
+include Red
 
 parser = OptionParser.new do |opts|
-  opts.banner = <<-BANNER
-Usage: red [filename] [options]
-
-Description:
-  Red is a Ruby-to-JavaScript transliterator.
-  
-  For more information see http://github.com/jessesielaff/red/wikis
-
-Options are:
-  BANNER
+  opts.banner = RED_MESSAGES[:banner]
   opts.separator ""
   opts.on("-h", "--help", "Show this help message.") { puts opts; exit }
-  opts.on("-r", "--rails", "Adds Red plugin to ./vendor/plugins") { build_red_plugin_for_rails }
-  opts.on("-s", "--string=RUBY_STRING", "Translate a single string to JavaScript") { |string| direct_translate(string) }
+  opts.on("-r", "--rails", "Add Red plugin to ./vendor/plugins") { build_red_plugin_for_rails }
+  opts.on("-s", "--string=RUBY_STRING", "Translate a single string to JavaScript.") { |string| direct_translate(string) }
+  opts.on("-v", "--version", "Print version number.") { puts Red::VERSION::STRING; exit }
   begin
     opts.parse!(ARGV)
   rescue OptionParser::InvalidOption => e
-    puts "You used an #{e.message}."
-    puts "Use red -h for help."
-    exit
+    puts RED_MESSAGES[:invalid] % [e.message]; exit
+  rescue OptionParser::MissingArgument => e
+    puts RED_MESSAGES[:missing] % [e.message]; exit
   end
 end
 
-if filename = ARGV[0]
-  self.compile_red_to_js(filename)
+if ARGV.empty?
+  puts RED_MESSAGES[:usage]; exit
 else
-  puts <<-USAGE
-Usage: red [filename] [options]
-
-Use red -h for help.
-  USAGE
+  class << Red
+    self.compile_red_to_js(ARGV[0])
+  end
 end
