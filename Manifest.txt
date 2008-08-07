@@ -20,7 +20,7 @@ lib/red/errors.rb
 lib/red/executable.rb
 lib/red/illegal_nodes.rb
 lib/red/literal_nodes.rb
-lib/red/messages.rb
+lib/red/plugin.rb
 lib/red/variable_nodes.rb
 lib/red/version.rb
 lib/red/wrap_nodes.rb

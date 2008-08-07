@@ -16,7 +16,7 @@ module Red
     
     class ErrorNode < DataNode # :nodoc:
       def compile_node(options = {})
-        "_____ Error %s _____" % [@value]
+        "/*  Error %s  */" % [@value]
       end
       
       def data_type

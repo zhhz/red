@@ -13,6 +13,7 @@ require 'red/definition_nodes'
 require 'red/errors'
 require 'red/illegal_nodes'
 require 'red/literal_nodes'
+require 'red/plugin'
 require 'red/variable_nodes'
 require 'red/wrap_nodes'
 
@@ -154,8 +155,12 @@ module Red
   end
   
   def handle_red_error(error) # :nodoc:
-    @@red_errors ||= "\nErrors"
-    @@red_errors << "\n%s: %s" % [@@exception_index += 1, error]
+    @@red_errors ||= "\n// Errors"
+    @@red_errors << "\n// %s: %s" % [@@exception_index += 1, error]
     return DataNode::ErrorNode.new(@@exception_index)
+  end
+  
+  def self.rails
+    require 'red/plugin'
   end
 end
