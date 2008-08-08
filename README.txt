@@ -1,17 +1,15 @@
-= Turn your JavaScript Red.
+= Turn your JavaScript <span style="color:rgb(195,0,0)">Red</span>.
 
-Red is a Ruby-to-JavaScript transliterator built on ParseTree[http://rubyforge.org/projects/parsetree/].
+<span style="color:rgb(195,0,0)">Red</span> is a Ruby-to-JavaScript transliterator built on <a href=http://rubyforge.org/projects/parsetree/>ParseTree</a>.
 
 === Installation
 
-To get Red working, install the rubygem.
-
-  sudo gem install red
+To get <span style="color:rgb(195,0,0)">Red</span> working, install the rubygem.
+<pre>sudo gem install red</pre>
 
 === Creating <tt>.js</tt> Files
 
 Create a new <tt>.red</tt> file and edit it using your text editor.
-
   $ mate example.red
   
   1| class Foo
@@ -25,7 +23,7 @@ Use the command-line executable to convert your Ruby into JavaScript.
   $ red example
   #=> var Foo = function(foo) { this.foo = foo; }
 
-Red creates a <tt>.js</tt> file containing the output.
+<span style="color:rgb(195,0,0)">Red</span> creates a <tt>.js</tt> file containing the output.
 
   $ ls
   #=> example.js   example.red
@@ -51,15 +49,15 @@ You can test short code snippets from the command line without creating a test f
 
 === Tutorial
 
-Check the {Tutorial page}[http://github.com/jessesielaff/red/wikis/tutorial] for an in-depth lesson in how to use Red to write your JavaScript in Ruby.
+Check the <a href=http://github.com/jessesielaff/red/wikis/tutorial>Tutorial page</a> for an in-depth lesson in how to use <span style="color:rgb(195,0,0)">Red</span> to write your JavaScript in Ruby.
 
 === Documentation
 
-The documentation[http://red-js.rubyforge.org/red/rdoc/] is currently rather nonexistent.
+The <a href=http://red-js.rubyforge.org/red/rdoc/>documentation</a> is currently rather nonexistent.
 
 === Bugs / Issues
 
-Got a problem?  Tell us about it.  Submit a ticket to the project page at Lighthous[http://jessesielaff.lighthouseapp.com/projects/15182-red].
+Got a problem?  Tell us about it.  Submit a ticket to the project page at <a href=http://jessesielaff.lighthouseapp.com/projects/15182-red>Lighthouse</a>.
 
 === MIT License
 
