@@ -12,9 +12,8 @@ module Red
           @arguments = (args_node[1..-1] || []).build_nodes
           @initializer = initializer_node.assoc(:scope).assoc(:block).reject {|node| node == args_node}.build_node
         end
-        properties = block_node.select {|node| (node.first == :cvdecl) rescue false }
-        functions = block_node.select {|node| (node != initializer_node) && ![:block, :scope].include?(node) }
-        @slots = (properties | functions).build_nodes
+        @properties = block_node.select {|node| (node.first == :cvdecl) rescue false }.build_nodes
+        @functions = block_node.select {|node| (node != initializer_node) && ![:block, :scope].include?(node) && ((node.first != :cvdecl) rescue false) }.build_nodes
         @@red_class = old_class
       end
       
@@ -33,14 +32,15 @@ module Red
       def compile_as_standard_class(options = {})
         class_name = @class_name.compile_node
         arguments = @arguments.compile_nodes.join(', ')
-        slots = @slots.compile_nodes(:as_attribute => true)
         initializer = @initializer.compile_node
-        return "%s%s = function(%s) { %s;%s }" % [self.var?, class_name, arguments, initializer, slots]
+        functions = @functions.compile_nodes(:as_attribute => true).join('; ')
+        properties = @properties.compile_nodes.join('; ')
+        return "%s%s = function(%s) { %s;%s }; %s" % [self.var?, class_name, arguments, initializer, functions, properties]
       end
       
       def compile_as_virtual_class(options = {})
         class_name = @class_name.compile_node
-        slots = @slots.compile_nodes(:as_prototype => true).compact.join(', ')
+        slots = (@properties | @functions).compile_nodes(:as_prototype => true).compact.join(', ')
         return "%s%s = { %s }" % [self.var?, class_name, slots]
       end
       

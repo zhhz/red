@@ -11,13 +11,14 @@ module Red
     
     class ClassVariableNode < AssignmentNode  # :nodoc:
       def compile_node(options = {})
+        expression = @expression.compile_node(:as_argument => true)
         if options[:as_prototype]
           receiver = @variable_name.compile_node
           "%s: %s"
         else
           receiver = "%s.%s" % [@@red_class, @variable_name.compile_node]
           "%s = %s"
-        end % [receiver, @expression.compile_node(:as_argument => true)]
+        end % [receiver, expression]
       end
     end
     
