@@ -7,6 +7,9 @@ Rakefile
 bin/red
 config/hoe.rb
 config/requirements.rb
+lib/javascripts/_dom_ready.js
+lib/javascripts/prototype_dom_ready.js
+lib/javascripts/red/unobtrusive.red
 lib/red.rb
 lib/red/assignment_nodes.rb
 lib/red/call_nodes.rb

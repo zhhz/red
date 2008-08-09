@@ -13,6 +13,7 @@ require 'red'
 require 'red/executable'
 require 'red/version'
 require 'optparse'
+require 'ftools'
 
 include Red
 
@@ -20,8 +21,9 @@ parser = OptionParser.new do |opts|
   opts.banner = RED_MESSAGES[:banner]
   opts.separator ""
   opts.on("-h", "--help", "Show this help message.") { puts opts; exit }
-  opts.on("-r", "--rails", "Add Red plugin to ./vendor/plugins") { build_red_plugin_for_rails }
+  opts.on("-r", "--rails", "Add Red plugin to ./vendor/plugins.") { build_red_plugin_for_rails }
   opts.on("-s", "--string=RUBY_STRING", "Translate a single string to JavaScript.") { |string| direct_translate(string) }
+  opts.on("-u", "--unobtrusive [LIBRARY]", "Add support for unobtrusive JavaScript to your Rails project.") { |library| add_unobtrusive(library) }
   opts.on("-v", "--version", "Print version number.") { puts Red::VERSION::STRING; exit }
   begin
     opts.parse!(ARGV)

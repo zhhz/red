@@ -1,20 +1,23 @@
 module Red # :nodoc:
   def build_red_plugin_for_rails
-    unless File.exists?('vendor/plugins')
-      puts "Directory vendor/plugins does not exist."
-      exit
-    end
-    
-    begin
-      Dir.mkdir('vendor/plugins/red') unless File.exists?('vendor/plugins/red')
-    rescue SystemCallError
-      puts "Unable to create directory in vendor/plugins"
-      exit
-    end
+    self.make_rails_directory('vendor/plugins/red')
     
     File.open('vendor/plugins/red/init.rb', 'w') { |f| f.write("require 'rubygems'\nrequire 'red'\n\nRed.rails\n") }
     
     puts "Red plugin added to project."
+    exit
+  end
+  
+  def add_unobtrusive(library)
+    red_directory_created = self.make_rails_directory('public/javascripts/red')
+    File.copy(File.join(File.dirname(__FILE__), "../javascripts/#{(library || '').downcase}_dom_ready.js"), "public/javascripts/dom_ready.js")
+    File.copy(File.join(File.dirname(__FILE__), "../javascripts/red/unobtrusive.red"), 'public/javascripts/red/unobtrusive.red')
+    
+    puts RED_MESSAGES[:unobtrusive]
+    exit
+  rescue Errno::ENOENT
+    puts "There is no Unobtrusive Red support for #{library}"
+    Dir.rmdir('public/javascripts/red') if red_directory_created
     exit
   end
   
@@ -36,6 +39,18 @@ module Red # :nodoc:
   
   def print_js(js_output, filename) # :nodoc:
     puts RED_MESSAGES[:output] % [("- #{filename}.js" unless filename == 'test'), js_output, @@red_errors ||= '']
+  end
+  
+  def make_rails_directory(dir)
+    parent_dir = File.dirname(dir)
+    unless File.exists?(parent_dir)
+      puts "Directory #{parent_dir} does not exist."
+      exit
+    end
+    Dir.mkdir(dir) unless File.exists?(dir)
+  rescue SystemCallError
+    puts "Unable to create directory in #{parent_dir}"
+    exit
   end
   
   def compile_red_to_js(filename)
@@ -97,6 +112,16 @@ Use red -h for help.
 
 =================================
 %s
+
+  MESSAGE
+  
+  RED_MESSAGES[:unobtrusive] = <<-MESSAGE
+
+public/javascripts/dom_ready.js
+public/javascripts/red
+public/javascripts/red/unobtrusive.red
+
+Unobtrusive Red added to project.
 
   MESSAGE
 end
