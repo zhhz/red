@@ -36,7 +36,7 @@ module Red
     
     class LocalVariableNode < AssignmentNode # :nodoc:
       def compile_node(options = {})
-        return (@variable_name.is_a?(LiteralNode::NamespaceNode) ? "%s = %s" : "var %s = %s") % self.compile_internals
+        return (@variable_name.is_a?(LiteralNode::NamespaceNode) || options[:skip_var] ? "%s = %s" : "var %s = %s") % self.compile_internals
       end
     end
     

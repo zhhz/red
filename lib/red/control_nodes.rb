@@ -88,7 +88,8 @@ module Red
       end
       
       def compile_internals(options = {})
-        condition, body = [@condition, @body].compile_nodes
+        condition = @condition.compile_node(:skip_var => true)
+        body = @body.compile_node
         return [condition, body]
       end
     end
@@ -108,7 +109,8 @@ module Red
       end
       
       def compile_internals(options = {})
-        condition, body = [@condition, @body].compile_nodes
+        condition = @condition.compile_node(:skip_var => true)
+        body = @body.compile_node
         return [condition, body]
       end
     end
