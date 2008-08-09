@@ -51,7 +51,8 @@ module Red
       end
       
       def compile_internals(options = {})
-        variable_name, slot, expression = [@variable_name, @slot, @expression].compile_nodes(:quotes => '', :as_argument => true)
+        variable_name, slot, expression = [@variable_name, @slot].compile_nodes(:quotes => '')
+        expression = @expression.compile_node(:as_argument => true)
         receiver = self.compile_receiver(variable_name, slot)
         return [receiver, expression]
       end
