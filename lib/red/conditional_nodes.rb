@@ -15,7 +15,7 @@ module Red
       
       def compile_internals(options = {})
         true_case, else_case, condition = [@true_case, @else_case, @condition].compile_nodes
-        return [condition, (true_case.empty? ? 'null' : true_case), (else_case.empty? ? 'null' : else_case)] if options[:as_argument]
+        return [condition, (true_case.empty? ? 'null' : @true_case.compile_node(:as_argument => true)), (else_case.empty? ? 'null' : @else_case.compile_node(:as_argument => true))] if options[:as_argument]
         condition = (true_case.empty? ? "!(%s)" : "%s") % [condition]
         true_case = "{ %s; }" % [true_case] unless true_case.empty?
         join      = " else "                      unless true_case.empty? || else_case.empty?
