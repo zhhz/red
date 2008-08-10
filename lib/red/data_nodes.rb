@@ -75,7 +75,7 @@ module Red
         return @value = @value.to_s unless camelize? && !disabled
         words = @value.to_s.gsub(/@|\$/,'').split(/_| /)
         underscore = words.shift if words.first.empty?
-        @value = (underscore ? '_' : '') + words[0] + words[1..-1].map {|word| word.capitalize}.join
+        @value = (underscore ? '_' : '') + words[0] + words[1..-1].map {|word| word == word.upcase ? word : word.capitalize }.join
       end
       
       def camelize?
