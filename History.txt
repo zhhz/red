@@ -1,3 +1,14 @@
+== 3.4.0 2008-08-09
+
+* 2 major enhancements:
+  * Added functionality to "obj" of "class << obj" construct.
+  * Souped up -r and -u options for the Red executable.
+
+* 3 bug fixes:
+  * Added <= and >= to the list of sugared Ruby operators.
+  * Fixed nested ternary operators.
+  * Fixed camelcasing of all_CAPS sections in identifiers.
+
 == 3.3.0 2008-08-08
 
 * 1 major enhancement:
