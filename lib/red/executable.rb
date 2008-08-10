@@ -1,46 +1,53 @@
 module Red # :nodoc:
   def build_red_plugin_for_rails(display_message = true)
     @files ||= ''
-    self.make_rails_directory('vendor/plugins/red', true)
-    
+    self.make_plugin_directory('vendor/plugins/red', true)
     self.create_plugin_file(:open, 'vendor/plugins/red/init.rb', "require 'rubygems'\nrequire 'red'\n\nRed.rails\n")
-    
-    self.make_rails_directory('public/javascripts/red')
+    self.make_plugin_directory('public/javascripts/red')
     
     return unless display_message
-    puts RED_MESSAGES[:rails] % @files
+    puts @files
     exit
   end
   
   def add_unobtrusive(library)
     @files ||= ''
     self.build_red_plugin_for_rails(false)
-    
     self.create_plugin_file(:copy, 'public/javascripts/dom_ready.js', File.join(File.dirname(__FILE__), "../javascripts/#{(library || '').downcase}_dom_ready.js"))
     self.create_plugin_file(:copy, 'public/javascripts/red/unobtrusive.red', File.join(File.dirname(__FILE__), "../javascripts/red/unobtrusive.red"))
     
   rescue Errno::ENOENT
     puts "There is no Unobtrusive Red support for #{library}"
   ensure
-    puts RED_MESSAGES[:unobtrusive] % @files
+    puts @files
+    exit
+  end
+  
+  def make_plugin_directory(dir, only_this_directory = false)
+    parent_dir = File.dirname(dir)
+    self.make_plugin_directory(parent_dir) unless File.exists?(parent_dir) || only_this_directory
+    directory_status = File.exists?(dir) ? 'exists' : Dir.mkdir(dir) && 'create'
+    @files << "      %s  %s\n" % [directory_status, dir]
+  rescue SystemCallError
+    puts "Unable to create directory in #{parent_dir}"
     exit
   end
   
   def create_plugin_file(operation, filename, contents)
     file_status = self.check_if_plugin_file_exists(filename)
     case operation
-      when :open : File.open(filename, 'w') { |f| f.write(contents) } if file_status == 'created'
+      when :open : File.open(filename, 'w') { |f| f.write(contents) } if file_status == 'create'
       when :copy : File.copy(contents, filename)
     end
-    @files << "\n%s  %s" % [file_status, filename]
+    @files << "      %s  %s\n" % [file_status, filename]
   end
   
   def check_if_plugin_file_exists(filename)
     if File.exists?(filename)
       print "File #{filename} exists. Overwrite [yN]? "
-      return (gets =~ /y/i ? 'created' : 'exists ')
+      return (gets =~ /y/i ? 'create' : 'exists')
     else
-      return 'created'
+      return 'create'
     end
   end
   
@@ -62,15 +69,6 @@ module Red # :nodoc:
   
   def print_js(js_output, filename) # :nodoc:
     puts RED_MESSAGES[:output] % [("- #{filename}.js" unless filename == 'test'), js_output, @@red_errors ||= '']
-  end
-  
-  def make_rails_directory(dir, only_this_directory = false)
-    parent_dir = File.dirname(dir)
-    self.make_rails_directory(parent_dir) unless File.exists?(parent_dir) || only_this_directory
-    @files << (File.exists?(dir) ? "\nexists   %s" : Dir.mkdir(dir) && "\ncreated  %s") % dir
-  rescue SystemCallError
-    puts "Unable to create directory in #{parent_dir}"
-    exit
   end
   
   def compile_red_to_js(filename)
@@ -132,20 +130,6 @@ Use red -h for help.
 
 =================================
 %s
-
-  MESSAGE
-  
-  RED_MESSAGES[:unobtrusive] = <<-MESSAGE
-%s
-
-Unobtrusive Red added to project.
-
-  MESSAGE
-  
-  RED_MESSAGES[:rails] = <<-MESSAGE
-%s
-
-Red plugin added to project.
 
   MESSAGE
 end
