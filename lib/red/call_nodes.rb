@@ -40,8 +40,7 @@ module Red
     class MethodNode # :nodoc:
       def compile_node(options = {})
         call_to_returned_function = [DefinitionNode::InstanceMethodNode, CallNode::BlockNode].include?(@receiver.class) ? :call : false
-        receiver = @receiver.compile_node
-        function = @function.compile_node
+        receiver, function = [@receiver, @function].compile_nodes
         arguments = @arguments.compile_nodes(:as_argument => true, :quotes => "'")
         return ("$%s(%s)" % [receiver = ((receiver == '$-') || (receiver == 'id' && @@red_library == :Prototype) ? nil : receiver), arguments.first]).gsub('$$','$').gsub('$class','$$') if @receiver.is_a?(VariableNode::GlobalVariableNode) && function == '-'
         case function.to_sym
@@ -66,6 +65,10 @@ module Red
           receiver += '.' unless receiver.empty?
           "%s%s(%s)" % [receiver, function, arguments.join(', ')]
         end
+      end
+      
+      def increment_operator
+        return @function.compile_node if ['+', '-'].include?(@function.compile_node) && @arguments.first.compile_node == '1'
       end
       
       class ExplicitNode < MethodNode # :nodoc:
