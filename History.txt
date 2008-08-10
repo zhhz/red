@@ -1,3 +1,8 @@
+== 3.4.1 2008-08-09
+
+* 1 major enhancement:
+  * Edited output messages for -r and -u executable options.
+
 == 3.4.0 2008-08-09
 
 * 2 major enhancements:
