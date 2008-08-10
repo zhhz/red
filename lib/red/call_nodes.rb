@@ -51,6 +51,8 @@ module Red
           "throw(%s)" % [arguments.first]
         when :new
           "new %s(%s)" % [receiver, arguments.join(', ')]
+        when :var
+          "var %s" % [arguments.join(', ')]
         when :[]
           if ([:symbol, :string].include?(@arguments.first.data_type) rescue false)
             arguments = @arguments.compile_nodes(:quotes => "", :as_argument => true)
