@@ -79,7 +79,8 @@ module Red
       end
       
       def camelize?
-        is_not_a_constant_name        = @value.to_s != @value.to_s.upcase
+        value = @value.to_s
+        is_not_a_constant_name        = value != value.upcase || value =~ (/@|\$/)
         is_not_a_js_special_attribute = @value.to_s[0..1] != '__'
         return is_not_a_constant_name && is_not_a_js_special_attribute
       end
