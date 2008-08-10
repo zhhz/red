@@ -20,7 +20,7 @@ require 'red/wrap_nodes'
 module Red
   @@red_library = nil
   @@red_module  = nil
-  @@red_class   = nil
+  @@red_class   = :window
   @@rescue_is_safe = false
   @@exception_index = 0
   

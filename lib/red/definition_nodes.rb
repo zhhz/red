@@ -127,14 +127,20 @@ module Red
       
     class ObjectLiteralNode # :nodoc:
       def initialize(receiver, scope)
+        old_class = @@red_class
+        @@red_class = @class = receiver.build_node.compile_node
         block_node = scope.assoc(:block) || scope
         properties = block_node.select {|node| (node.first == :cvdecl) rescue false }
         functions = block_node.select {|node| ![:block, :scope].include?(node) }
         @slots = (properties | functions).build_nodes
+        @@red_class = old_class
       end
       
       def compile_node(options = {})
+        old_class = @@red_class
+        @@red_class = @class
         slots = @slots.compile_nodes(:as_prototype => true).compact.join(', ')
+        @@red_class = old_class
         return "{ %s }" % [slots]
       end
     end
