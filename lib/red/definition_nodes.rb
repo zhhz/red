@@ -2,18 +2,25 @@ module Red
   class DefinitionNode # :nodoc:
     class ClassNode # :nodoc:
       def initialize(class_name, superclass, scope)
-        raise(BuildError::NoClassInheritance, "Class inheritance is currently not supported#{"for the #{@@red_library} JavaScript library";''}") if superclass
+        raise(BuildError::NoClassInheritance, "Class inheritance is currently not supported#{" for the #{@@red_library} JavaScript library";''}") if superclass
         old_class = @@red_class
         @@red_class = @class = class_name
         @class_name, @superclass = [class_name, superclass].build_nodes
         block_node = scope.assoc(:block) || scope
-        if initializer_node = block_node.rassoc(:initialize)
-          args_node = initializer_node.assoc(:scope).assoc(:block).assoc(:args)
-          @arguments = (args_node[1..-1] || []).build_nodes
-          @initializer = initializer_node.assoc(:scope).assoc(:block).reject {|node| node == args_node}.build_node
+        case @@red_library
+        when :Prototype
+          @initializer = block_node.rassoc(:initialize)
+          @properties = block_node.select {|node| (node.first == :cvdecl) rescue false }.build_nodes
+          @functions = block_node.select {|node| ![:block, :scope].include?(node) && ((node.first != :cvdecl) rescue false) }.build_nodes
+        else
+          if initializer_node = block_node.rassoc(:initialize)
+            args_node = initializer_node.assoc(:scope).assoc(:block).assoc(:args)
+            @arguments = (args_node[1..-1] || []).build_nodes
+            @initializer = initializer_node.assoc(:scope).assoc(:block).reject {|node| node == args_node}.build_node
+          end
+          @properties = block_node.select {|node| (node.first == :cvdecl) rescue false }.build_nodes
+          @functions = block_node.select {|node| (node != initializer_node) && ![:block, :scope].include?(node) && ((node.first != :cvdecl) rescue false) }.build_nodes
         end
-        @properties = block_node.select {|node| (node.first == :cvdecl) rescue false }.build_nodes
-        @functions = block_node.select {|node| (node != initializer_node) && ![:block, :scope].include?(node) && ((node.first != :cvdecl) rescue false) }.build_nodes
         @@red_class = old_class
       end
       
@@ -21,12 +28,23 @@ module Red
         old_class = @@red_class
         @@red_class = @class
         if @initializer
-          output = self.compile_as_standard_class
+          case @@red_library
+          when :Prototype
+            output = self.compile_as_prototype_class
+          else
+            output = self.compile_as_standard_class
+          end
         else
           output = self.compile_as_virtual_class
         end
         @@red_class = old_class
         return output
+      end
+      
+      def compile_as_prototype_class
+        class_name = @class_name.compile_node
+        slots = (@properties | @functions).compile_nodes(:as_prototype => true).compact.join(', ')
+        return "%s%s = Class.create({ %s })" % [self.var?, class_name, slots]
       end
       
       def compile_as_standard_class(options = {})

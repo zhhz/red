@@ -42,7 +42,7 @@ module Red
       def compile_node(options = {})
         receiver = "this.%s" % @variable_name.compile_node
         return self.compile_increment(:receiver => receiver) if self.call_to_increment?
-        return "this.%s = %s" % [receiver, @expression.compile_node(:as_argument => true)]
+        return "%s = %s" % [receiver, @expression.compile_node(:as_argument => true)]
       end
     end
     
