@@ -1,3 +1,11 @@
+== 3.4.2 2008-08-12
+
+* 1 major enhancement:
+  * Added Prototype support for constructible class definition.
+
+* 1 bug fix:
+  * @instance_variable no longer initializes with reduplicated "this". Bug was introduced with addition of incremental operators.
+
 == 3.4.1 2008-08-09
 
 * 1 major enhancement:
