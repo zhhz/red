@@ -43,8 +43,9 @@ module Red
       
       def compile_as_prototype_class
         class_name = @class_name.compile_node
-        slots = (@properties | @functions).compile_nodes(:as_prototype => true).compact.join(', ')
-        return "%s%s = Class.create({ %s })" % [self.var?, class_name, slots]
+        functions = @functions.compile_nodes(:as_prototype => true).compact.join(', ')
+        properties = @properties.compile_nodes(:as_prototype => true).compact.join(', ')
+        return "%s%s = Class.create({ %s });Object.extend(%s, { %s })" % [self.var?, class_name, functions, class_name, properties]
       end
       
       def compile_as_standard_class(options = {})
