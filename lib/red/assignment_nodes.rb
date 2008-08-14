@@ -64,14 +64,20 @@ module Red
       end
       
       def compile_internals(options = {})
-        variable_name, slot = [@variable_name, @slot].compile_nodes(:quotes => '')
         expression = @expression.compile_node(:as_argument => true)
-        receiver = self.compile_receiver(variable_name, slot)
+        receiver = self.compile_receiver
         return [receiver, expression]
       end
       
-      def compile_receiver(variable_name, slot)
-        return ([:symbol, :string].include?((@slot.data_type rescue :node)) ? "%s.%s" : "%s[%s]") % [variable_name, slot]
+      def compile_receiver
+        variable_name = @variable_name.compile_node
+        if [:symbol, :string].include?((@slot.data_type rescue :node))
+          slot = @slot.compile_node(:quotes => '')
+          "%s.%s"
+        else
+          slot = @slot.compile_node
+          "%s[%s]"
+        end % [variable_name, slot]
       end
     end
     
@@ -107,7 +113,12 @@ module Red
         end
         
         def compile_receiver(receiver, slot)
-          return ([:symbol, :string].include?((@slot.data_type rescue :node)) ? "%s.%s" : "%s[%s]") % [receiver, slot]
+          if [:symbol, :string].include?((@slot.data_type rescue :node))
+            "%s.%s"
+          else
+            slot = @slot.compile_node(:quotes => "'")
+            "%s[%s]"
+          end % [receiver, slot]
         end
       end
       
