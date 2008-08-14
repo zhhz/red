@@ -1,3 +1,14 @@
+== 3.5.0 2008-08-13
+
+* 2 major enhancements:
+  * Added support for child classes.
+  * Updated method for "call to returned function"; now use "_".
+
+* 3 bug fixes:
+  * Fixed Prototype library's handling of class_variables; now separated out into an Object.extend declaration.
+  * String quoting is now properly handled in foo["eval#{string}"]-type calls.
+  * Added parentheses wrapping to sugared operators ('+', '*', '||', '&&', etc) in order to solve chained method problems.
+
 == 3.4.2 2008-08-12
 
 * 1 major enhancement:

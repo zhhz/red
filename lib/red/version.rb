@@ -1,8 +1,8 @@
 module Red
   module VERSION #:nodoc:
     MAJOR = 3
-    MINOR = 4
-    TINY  = 2
+    MINOR = 5
+    TINY  = 0
     
     STRING = [MAJOR, MINOR, TINY].join('.')
   end
