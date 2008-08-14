@@ -15,7 +15,7 @@ module Red
       case @initial
         when DataNode::NilNode    : :nil
         when DataNode::RangeNode  : :range
-        when DataNode::StringNode : :string
+        when DataNode::StringNode : (@subsequent.empty? ? :string : :eval)
         when DataNode::SymbolNode : :symbol
         else @initial.value.is_a?(Numeric) ? :numeric : :regexp
       end
@@ -23,7 +23,7 @@ module Red
     
     class ArrayNode < LiteralNode # :nodoc:
       def compile_node(options = {})
-        elements = @subsequent.unshift(@initial).compile_nodes.join(', ')
+        elements = @subsequent.unshift(@initial).compile_nodes.reject {|element| element.empty? }.join(', ')
         return "[%s]" % [elements]
       end
     end

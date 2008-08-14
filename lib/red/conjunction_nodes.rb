@@ -10,13 +10,13 @@ module Red
     
     class AndNode < ConjunctionNode # :nodoc:
       def compile_node(options = {})
-        return "%s && %s" % self.compile_internals
+        return "(%s && %s)" % self.compile_internals
       end
     end
     
     class OrNode < ConjunctionNode # :nodoc:
       def compile_node(options = {})
-        return "%s || %s" % self.compile_internals
+        return "(%s || %s)" % self.compile_internals
       end
     end
   end

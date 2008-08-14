@@ -39,13 +39,13 @@ module Red
     
     class MethodNode # :nodoc:
       def compile_node(options = {})
-        call_to_returned_function = [DefinitionNode::InstanceMethodNode, CallNode::BlockNode].include?(@receiver.class) ? :call : false
-        receiver, function = [@receiver, @function].compile_nodes
+        receiver = @receiver.compile_node
+        function = @function.compile_node(:quotes => '')
         arguments = @arguments.compile_nodes(:as_argument => true, :quotes => "'")
         return ("$%s(%s)" % [receiver = ((receiver == '$-') || (receiver == 'id' && @@red_library == :Prototype) ? nil : receiver), arguments.first]).gsub('$$','$').gsub('$class','$$') if @receiver.is_a?(VariableNode::GlobalVariableNode) && function == '-'
         case function.to_sym
-        when :-, :+, :<, :>, :>=, :<=, :%, :*, :/, :^, :==, :===, :instanceof
-          "%s %s %s" % [receiver, function, arguments.first]
+        when :-, :+, :<, :>, :>=, :<=, :%, :*, :/, :^, :==, :===, :instanceof, :in
+          "(%s %s %s)" % [receiver, function, arguments.first]
         when :raise
           "throw(%s)" % [arguments.first]
         when :new
@@ -59,8 +59,8 @@ module Red
           else
             "%s[%s]"
           end % [receiver, arguments.first]
-        when call_to_returned_function
-          "(%s)(%s)" % [receiver, arguments]
+        when :_
+          "%s(%s)" % [receiver, arguments]
         else
           receiver += '.' unless receiver.empty?
           "%s%s(%s)" % [receiver, function, arguments.join(', ')]
