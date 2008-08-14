@@ -10,6 +10,7 @@ module Red
         case @@red_library
         when :Prototype
           @initializer = block_node.rassoc(:initialize)
+          @classes = block_node.select {|node| (node.first == :class) rescue false }.build_nodes
           @properties = block_node.select {|node| (node.first == :cvdecl) rescue false }.build_nodes
           @functions = block_node.select {|node| ![:block, :scope].include?(node) && ((node.first != :cvdecl) rescue false) }.build_nodes
         else
@@ -18,6 +19,7 @@ module Red
             @arguments = (args_node[1..-1] || []).build_nodes
             @initializer = initializer_node.assoc(:scope).assoc(:block).reject {|node| node == args_node}.build_node
           end
+          @classes = block_node.select {|node| (node.first == :class) rescue false }.build_nodes
           @properties = block_node.select {|node| (node.first == :cvdecl) rescue false }.build_nodes
           @functions = block_node.select {|node| (node != initializer_node) && ![:block, :scope].include?(node) && ((node.first != :cvdecl) rescue false) }.build_nodes
         end
@@ -27,7 +29,9 @@ module Red
       def compile_node(options = {})
         old_class = @@red_class
         @@red_class = @class
-        if @initializer
+        if options[:as_prototype]
+          output = self.compile_as_child_class
+        elsif @initializer
           case @@red_library
           when :Prototype
             output = self.compile_as_prototype_class
@@ -39,6 +43,12 @@ module Red
         end
         @@red_class = old_class
         return output
+      end
+      
+      def compile_as_child_class
+        class_name = @class_name.compile_node
+        slots = (@classes | @properties | @functions).compile_nodes(:as_prototype => true).compact.join(', ')
+        return "%s: { %s }" % [class_name, slots]
       end
       
       def compile_as_prototype_class
