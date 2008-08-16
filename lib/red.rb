@@ -57,7 +57,7 @@ module Red
     :dstr         => LiteralNode::StringNode,
     :dsym         => IllegalNode::SymbolEvaluationNode,
     :dvar         => VariableNode::OtherVariableNode,
-    :dxstr        => LiteralNode::StringNode,
+    :dxstr        => LiteralNode::JavaScriptNode,
     :ensure       => ControlNode::EnsureNode,
     :evstr        => LiteralNode::StringNode,
     :false        => ConstantNode::FalseNode,
@@ -106,7 +106,7 @@ module Red
     :vcall        => VariableNode::OtherVariableNode,
     :when         => ConditionalNode::WhenNode,
     :while        => ControlNode::WhileNode,
-    :xstr         => LiteralNode::StringNode,
+    :xstr         => LiteralNode::JavaScriptNode,
     :yield        => WrapNode::YieldNode,
     :zarray       => LiteralNode::ArrayNode,
     :zsuper       => WrapNode::SuperNode

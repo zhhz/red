@@ -44,6 +44,14 @@ module Red
       end
     end
     
+    class JavaScriptNode < LiteralNode # :nodoc:
+      def compile_node(options = {})
+        initial    = @initial.compile_node(:quotes => "")
+        subsequent = @subsequent.map {|element| element.compile_node(:quotes => "")}.join
+        return "%s%s" % [initial, subsequent]
+      end
+    end
+    
     class MultilineNode < LiteralNode # :nodoc:
       def compile_node(options = {})
         lines = @subsequent.unshift(@initial).compile_nodes(options).compact.join('; ')
