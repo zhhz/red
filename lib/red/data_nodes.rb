@@ -6,10 +6,6 @@ module Red
       @value = value
     end
     
-    def compile_node(options = {})
-      return @value.inspect
-    end
-    
     def wrap_string(string, left_wrapper = "", right_wrapper = nil)
       return "%s%s%s" % [left_wrapper, string, right_wrapper || left_wrapper]
     end
@@ -31,6 +27,9 @@ module Red
     end
     
     class OtherNode < DataNode # :nodoc:
+      def compile_node(options = {})
+        return (options[:as_receiver] ? "(%s)" : "%s") % [@value.inspect]
+      end
     end
     
     class RangeNode < DataNode # :nodoc:

@@ -39,7 +39,7 @@ module Red
     
     class MethodNode # :nodoc:
       def compile_node(options = {})
-        receiver = @receiver.compile_node
+        receiver = @receiver.compile_node(:as_receiver => true)
         function = @function.compile_node(:quotes => '')
         arguments = @arguments.compile_nodes(:as_argument => true, :quotes => "'")
         return ("$%s(%s)" % [receiver = ((receiver == '$-') || (receiver == 'id' && @@red_library == :Prototype) ? nil : receiver), arguments.first]).gsub('$$','$').gsub('$class','$$') if @receiver.is_a?(VariableNode::GlobalVariableNode) && function == '-'
