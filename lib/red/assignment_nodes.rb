@@ -14,7 +14,7 @@ module Red
     end
     
     def call_to_increment?
-      return @expression.increment_operator rescue false
+      return (@expression.increment_operator && @expression.matches_receiver(@variable_name)) rescue false
     end
     
     class ClassVariableNode < AssignmentNode  # :nodoc:

@@ -67,6 +67,10 @@ module Red
         end
       end
       
+      def matches_receiver(receiver)
+        return (receiver.compile_node == @receiver.compile_node) rescue false
+      end
+      
       def increment_operator
         return @function.compile_node if ['+', '-'].include?(@function.compile_node) && @arguments.first.compile_node == '1'
       end
