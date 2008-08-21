@@ -32,7 +32,7 @@ module Red
     
     class ForNode # :nodoc:
       def initialize(source, iterator, body)
-        @properties_loop = (iterator.last == :property)
+        @properties_loop = ([:property, :key].include?(iterator.last))
         @source, @iterator, @body = [source, iterator.last, body].build_nodes
       end
       
@@ -43,7 +43,7 @@ module Red
         if @properties_loop
           "for (var property in %s) { %s; }" % [source, body]
         else
-          "for (var %s = 0; %s < %s.length; %s++) { %s; }" % [iterator, iterator, source, iterator, body]
+          "for (var %s = 0, end = %s.length; %s < end; ++%s) { %s; }" % [iterator, source, iterator, iterator, body]
         end
       end
     end
@@ -88,7 +88,7 @@ module Red
       end
       
       def compile_internals(options = {})
-        condition = @condition.compile_node(:skip_var => true)
+        condition = @condition.compile_node(:skip_var => true, :as_argument => true)
         body = @body.compile_node
         return [condition, body]
       end
@@ -109,7 +109,7 @@ module Red
       end
       
       def compile_internals(options = {})
-        condition = @condition.compile_node(:skip_var => true)
+        condition = @condition.compile_node(:skip_var => true, :as_argument => true)
         body = @body.compile_node
         return [condition, body]
       end

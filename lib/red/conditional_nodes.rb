@@ -14,7 +14,8 @@ module Red
       end
       
       def compile_internals(options = {})
-        true_case, else_case, condition = [@true_case, @else_case, @condition].compile_nodes
+        true_case, else_case = [@true_case, @else_case].compile_nodes
+        condition = @condition.compile_node(:as_argument => true)
         return [condition, (true_case.empty? ? 'null' : @true_case.compile_node(:as_argument => true)), (else_case.empty? ? 'null' : @else_case.compile_node(:as_argument => true))] if options[:as_argument]
         condition = (true_case.empty? ? "!(%s)" : "%s") % [condition]
         true_case = "{ %s; }" % [true_case] unless true_case.empty?
