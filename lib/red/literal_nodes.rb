@@ -40,7 +40,7 @@ module Red
       
       def compile_node(options = {})
         pairs = @hash.map { |k,v| "%s: %s" % [k.compile_node(:quotes => "'"), v.compile_node(:as_argument => true)] }.join(', ')
-        "{ %s }" % [pairs]
+        return "{ %s }" % [pairs]
       end
     end
     

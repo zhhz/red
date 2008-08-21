@@ -64,7 +64,7 @@ module Red
         initializer = @initializer.compile_node
         functions = @functions.compile_nodes(:as_attribute => true).join('; ')
         properties = @properties.compile_nodes.join('; ')
-        return "%s%s = function(%s) { %s;%s }; %s" % [self.var?, class_name, arguments, initializer, functions, properties]
+        return "%s%s = function %s(%s) { %s;%s }; %s" % [self.var?, class_name, class_name, arguments, initializer, functions, properties]
       end
       
       def compile_as_virtual_class(options = {})
