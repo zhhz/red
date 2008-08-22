@@ -23,6 +23,7 @@ module Red
   @@red_class   = :window
   @@rescue_is_safe = false
   @@exception_index = 0
+  # test
   
   ARRAY_NODES = {
     :and          => ConjunctionNode::AndNode,
