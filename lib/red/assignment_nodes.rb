@@ -1,162 +1,89 @@
 module Red
-  class AssignmentNode # :nodoc:
-    def initialize(variable_name, expression)
-      raise(BuildError::NoMultilineAssignment, "Multiline assignment (e.g. foo = begin; line1; line2; end) is not supported") if expression.first == :block
-      @variable_name, @expression = [variable_name, expression].build_nodes
-    end
-    
-    def compile_internals(options = {})
-      return [@variable_name, @expression].compile_nodes(:as_argument => true)
-    end
-    
-    def compile_increment(options = {})
-      return "%s%s" % [options[:receiver] || @variable_name.compile_node, @expression.increment_operator * 2]
-    end
-    
-    def call_to_increment?
-      return (@expression.increment_operator && @expression.matches_receiver(@variable_name)) rescue false
-    end
-    
-    class ClassVariableNode < AssignmentNode  # :nodoc:
-      def compile_node(options = {})
-        expression = @expression.compile_node(:as_argument => true)
-        if options[:as_prototype]
-          receiver = @variable_name.compile_node
-          "%s: %s"
+  class AssignmentNode < String # :nodoc:
+    class ClassVariable < AssignmentNode  # :nodoc:
+      def initialize(variable_name, expression, options)
+        if options[:as_property]
+          string = "$$%s: %s" % [variable_name.zoop, expression.zoop(:as_argument => true)]
         else
-          receiver = "%s.%s" % [@@red_class, @variable_name.compile_node]
-          return self.compile_increment(:receiver => receiver) if self.call_to_increment?
-          "%s = %s"
-        end % [receiver, expression]
-      end
-    end
-    
-    class GlobalVariableNode < AssignmentNode  # :nodoc:
-      def compile_node(options = {})
-        return self.compile_increment if self.call_to_increment?
-        return "%s = %s" % self.compile_internals
-      end
-    end
-    
-    class InstanceVariableNode < AssignmentNode # :nodoc:
-      def compile_node(options = {})
-        receiver = "this.%s" % @variable_name.compile_node
-        return self.compile_increment(:receiver => receiver) if self.call_to_increment?
-        return "%s = %s" % [receiver, @expression.compile_node(:as_argument => true)]
-      end
-    end
-    
-    class LocalVariableNode < AssignmentNode # :nodoc:
-      def compile_node(options = {})
-        return self.compile_increment if self.call_to_increment?
-        return (@variable_name.is_a?(LiteralNode::NamespaceNode) || options[:skip_var] ? "%s = %s" : "var %s = %s") % self.compile_internals
-      end
-    end
-    
-    class AttributeNode # :nodoc:
-      def initialize(variable_name, slot_equals, arguments)
-        @variable_name, @expression = [variable_name, arguments.last].build_nodes
-        @slot = (slot_equals == :[]= ? arguments[1] : slot_equals.to_s.gsub(/=/,'').to_sym).build_node
-      end
-      
-      def compile_node(options = {})
-        return "%s = %s" % compile_internals
-      end
-      
-      def compile_internals(options = {})
-        expression = @expression.compile_node(:as_argument => true)
-        receiver = self.compile_receiver
-        return [receiver, expression]
-      end
-      
-      def compile_receiver
-        variable_name = @variable_name.compile_node
-        if [:symbol, :string].include?((@slot.data_type rescue :node))
-          slot = @slot.compile_node(:quotes => '')
-          "%s.%s"
-        else
-          slot = @slot.compile_node
-          "%s[%s]"
-        end % [variable_name, slot]
-      end
-    end
-    
-    class OperatorNode # :nodoc:
-      def compile_node(options = {})
-        return self.compile_increment if self.call_to_increment?
-        return "%s%s = %s %s %s" % self.compile_internals
-      end
-      
-      def compile_increment(options = {})
-        receiver, operation = [@receiver, @operation].compile_nodes
-        slot = @slot.compile_node(:quotes => '')
-        original = self.compile_receiver(receiver, slot)
-        return "%s%s" % [original, operation * 2]
-      end
-      
-      def compile_internals(options = {})
-        receiver, operation = [@receiver, @operation].compile_nodes
-        expression = @expression.compile_node(:as_argument => true)
-        slot       = @slot.compile_node(:quotes => '')
-        original   = self.compile_receiver(receiver, slot)
-        var        = (self.var? rescue nil)
-        return [var, original, original, operation, expression]
-      end
-      
-      def call_to_increment?
-        return ['+', '-'].include?(@operation.compile_node) && @expression.compile_node == '1'
-      end
-      
-      class BracketNode < OperatorNode # :nodoc:
-        def initialize(receiver, bracket_contents, operation, expression)
-          @receiver, @slot, @operation, @expression = [receiver, bracket_contents.last, operation, expression].build_nodes
+          string = "%s.$$%s = %s" % [@@namespace_stack.join('.'), variable_name.zoop, expression.zoop(:as_argument => true)]
         end
-        
-        def compile_receiver(receiver, slot)
-          if [:symbol, :string].include?((@slot.data_type rescue :node))
-            "%s.%s"
+        self << string
+      end
+    end
+    
+    class GlobalVariable < AssignmentNode  # :nodoc:
+      def initialize(variable_name, expression, options)
+        self << "%s = %s" % [variable_name.zoop, expression.zoop(:as_argument => true)]
+      end
+    end
+    
+    class InstanceVariable < AssignmentNode # :nodoc:
+      def initialize(variable_name, expression, options)
+        self << "this.$%s = %s" % [variable_name.zoop, expression.zoop(:as_argument => true)]
+      end
+    end
+    
+    class LocalVariable < AssignmentNode # :nodoc:
+      def initialize(variable_name, expression, options)
+        if options[:as_default]
+          self << "%s = %s || %s" % [variable_name.zoop, variable_name.zoop, expression.zoop(:as_argument => true)]
+        else
+          string = (options[:as_argument] || variable_name.is_a?(Array) && variable_name.first == :colon2) ? "%s = %s" : "var %s = %s"
+          self << string % [variable_name.zoop, expression.zoop(:as_argument => true)]
+        end
+      end
+    end
+    
+    class Attribute < AssignmentNode # :nodoc:
+      def initialize(variable_name, writer, arguments, options)
+        expression = arguments.pop.zoop(:as_argument => true)
+        accessor = (writer == :[]= ? arguments[1] : writer.to_s.gsub(/=/,'').to_sym)
+        if accessor.is_a?(Symbol) || accessor.first == :lit && [Symbol, String].include?(accessor.last.class)
+          string = [:const, :colon2].include?(variable_name.first) ? "%s.$$%s" : "%s.$%s"
+          receiver = string % [variable_name.zoop, accessor.zoop(:quotes => '')]
+        else
+          receiver = "%s[%s]" % [variable_name.zoop, accessor.zoop(:as_argument => true)]
+        end
+        self << "%s = %s" % [receiver, expression]
+      end
+    end
+    
+    class Operator < AssignmentNode # :nodoc:
+      class Bracket < Operator # :nodoc:
+        def initialize(object, bracket_contents, operation, expression, options)
+          accessor = bracket_contents.last
+          if accessor.is_a?(Symbol) || accessor.first == :str || accessor.first == :lit && accessor.last.is_a?(Symbol)
+            receiver = "%s.%s" % [object.zoop, accessor.zoop(:quotes => '')]
           else
-            slot = @slot.compile_node(:quotes => "'")
-            "%s[%s]"
-          end % [receiver, slot]
+            receiver = "%s[%s]" % [object.zoop, accessor.zoop(:as_argument => true)]
+          end
+          self << "%s = %s %s %s" % [receiver, receiver, operation.zoop, expression.zoop(:as_argument => true)]
         end
       end
       
-      class DotNode < OperatorNode # :nodoc:
-        def initialize(receiver, slot_equals, operation, expression)
-          @receiver, @slot, @operation, @expression = [receiver, slot_equals.to_s.gsub(/=/,''), operation, expression].build_nodes
-        end
-        
-        def compile_receiver(receiver, slot)
-          return "%s.%s" % [receiver, slot]
+      class Dot < Operator # :nodoc:
+        def initialize(object, writer, operation, expression, options)
+          property_name = writer.to_s.gsub(/=/,'').to_sym.zoop(:quotes => '')
+          receiver = ([:const, :colon2].include?(object.first) ? "%s.$$%s" : "%s.$%s") % [object.zoop, property_name]
+          self << "%s = %s %s %s" % [receiver, receiver, operation.zoop, expression.zoop(:as_argument => true)]
         end
       end
       
-      class OrNode < OperatorNode # :nodoc:
-        def initialize(receiver, assignment_node_array)
-          @receiver, @slot, @operation, @expression = [receiver, nil, %s(||), assignment_node_array.last].build_nodes
-        end
-        
-        def compile_receiver(receiver, slot)
-          return "%s" % [receiver]
-        end
-        
-        def var?
-          return "var " unless [VariableNode::GlobalVariableNode, VariableNode::InstanceVariableNode, VariableNode::ClassVariableNode].include?(@receiver.class)
+      class Or < Operator # :nodoc:
+        def initialize(object, assignment, options)
+          expression = assignment.last.zoop(:as_argument => true)
+          receiver = object.zoop
+          string = (object.is_a?(Array) && [:const, :lvar].include?(object.first)) ? "var %s = %s || %s" : "%s = %s || %s"
+          self << string % [receiver, receiver, expression]
         end
       end
       
-      class AndNode < OperatorNode # :nodoc:
-        def initialize(receiver, assignment_node_array)
-          @receiver, @slot, @operation, @expression = [receiver, nil, %s(&&), assignment_node_array.last].build_nodes
-        end
-        
-        def compile_receiver(receiver, slot)
-          return "%s" % [receiver]
-        end
-        
-        def var?
-          return "var " unless [VariableNode::GlobalVariableNode, VariableNode::InstanceVariableNode, VariableNode::ClassVariableNode].include?(@receiver.class)
+      class And < Operator # :nodoc:
+        def initialize(object, assignment, options)
+          expression = assignment.last.zoop(:as_argument => true)
+          receiver = object.zoop
+          string = (object.is_a?(Array) && [:const, :lvar].include?(object.first)) ? "var %s = %s && %s" : "%s = %s && %s"
+          self << string % [receiver, receiver, expression]
         end
       end
     end

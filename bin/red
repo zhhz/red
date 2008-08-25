@@ -23,6 +23,7 @@ parser = OptionParser.new do |opts|
   opts.on("-h", "--help", "Show this help message.") { puts opts; exit }
   opts.on("-r", "--rails", "Add Red plugin to ./vendor/plugins.") { build_red_plugin_for_rails }
   opts.on("-s", "--string=RUBY_STRING", "Translate a single string to JavaScript.") { |string| direct_translate(string) }
+  opts.on("-t", "--test", "") { @test = true }
   opts.on("-u", "--unobtrusive [LIBRARY]", "Add support for unobtrusive JavaScript to your Rails project.") { |library| add_unobtrusive(library) }
   opts.on("-v", "--version", "Print version number.") { puts Red::VERSION::STRING; exit }
   begin
@@ -36,6 +37,14 @@ end
 
 if ARGV.empty?
   puts RED_MESSAGES[:usage]; exit
+elsif @test
+  filename = ARGV[0]
+  unless File.exists?(file = "%s.red" % [filename]) || File.exists?(file = "%sred/%s.red" % [(dir = "public/javascripts/"), filename])
+    puts "File #{filename}.red does not exist."
+    exit
+  end
+  
+  self.direct_translate(File.read(file))
 else
   class << Red
     self.compile_red_to_js(ARGV[0])

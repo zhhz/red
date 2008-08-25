@@ -4,8 +4,6 @@ $:.unshift(File.dirname(__FILE__)) unless
 require 'parse_tree'
 require 'red/assignment_nodes'
 require 'red/call_nodes'
-require 'red/conditional_nodes'
-require 'red/conjunction_nodes'
 require 'red/constant_nodes'
 require 'red/control_nodes'
 require 'red/data_nodes'
@@ -13,6 +11,7 @@ require 'red/definition_nodes'
 require 'red/errors'
 require 'red/illegal_nodes'
 require 'red/literal_nodes'
+require 'red/logic_nodes'
 require 'red/plugin'
 require 'red/variable_nodes'
 require 'red/wrap_nodes'
@@ -20,128 +19,119 @@ require 'red/wrap_nodes'
 module Red
   @@red_library = nil
   @@red_module  = nil
-  @@red_class   = :window
-  @@rescue_is_safe = false
+  @@namespace_stack = []
   @@exception_index = 0
-  # test
+  @@red_classes = %w:Array Hash Fixnum Integer Number Numeric Object Range String:
+  @@red_modules = %w:Enumerable Comparable:
+  @@red_initializers = {'' => [:defn, :initialize, [:scope, [:block, [:args], [:nil]]]]}
   
   ARRAY_NODES = {
-    :and          => ConjunctionNode::AndNode,
+    :and          => LogicNode::Conjunction::And,
     :argscat      => IllegalNode::MultipleAssignmentNode,
     :argspush     => IllegalNode::MultipleAssignmentNode,
-    :array        => LiteralNode::ArrayNode,
-    :attrasgn     => AssignmentNode::AttributeNode,
-    :begin        => ControlNode::BeginNode,
-    :block        => LiteralNode::MultilineNode,
-    :block_arg    => IllegalNode::BlockArgument,
-    :block_pass   => IllegalNode::BlockArgument,
-    :break        => ConstantNode::BreakNode,
-    :call         => CallNode::MethodNode::ExplicitNode,
-    :case         => ConditionalNode::CaseNode,
-    :class        => DefinitionNode::ClassNode,
-    :cdecl        => AssignmentNode::GlobalVariableNode,
-    :colon2       => LiteralNode::NamespaceNode,
-    :colon3       => ControlNode::LibraryNode,
-    :const        => VariableNode::OtherVariableNode,
-    :cvar         => VariableNode::ClassVariableNode,
-    :cvasgn       => AssignmentNode::ClassVariableNode,
-    :cvdecl       => AssignmentNode::ClassVariableNode,
-    :dasgn        => AssignmentNode::LocalVariableNode,
-    :dasgn_curr   => AssignmentNode::LocalVariableNode,
-    :defined      => WrapNode::DefinedNode,
-    :defn         => DefinitionNode::InstanceMethodNode,
-    :defs         => DefinitionNode::ClassMethodNode,
-    :dot2         => LiteralNode::RangeNode,
-    :dot3         => LiteralNode::RangeNode::ExclusiveNode,
+    :array        => LiteralNode::Array,
+    :attrasgn     => AssignmentNode::Attribute,
+    :begin        => ControlNode::Begin,
+    :block        => LiteralNode::Multiline,
+    :block_arg    => CallNode::Block::Ampersand,
+    :block_pass   => CallNode::Block::Ampersand,
+    :break        => ConstantNode::Break,
+    :call         => CallNode::Method::ExplicitReceiver,
+    :case         => LogicNode::Case,
+    :class        => DefinitionNode::Class,
+    :cdecl        => AssignmentNode::GlobalVariable,
+    :colon2       => LiteralNode::Namespace,
+    :colon3       => ControlNode::Library,
+    :const        => VariableNode::OtherVariable,
+    :cvar         => VariableNode::ClassVariable,
+    :cvasgn       => AssignmentNode::ClassVariable,
+    :cvdecl       => AssignmentNode::ClassVariable,
+    :dasgn        => AssignmentNode::LocalVariable,
+    :dasgn_curr   => AssignmentNode::LocalVariable,
+    :defined      => WrapNode::Defined,
+    :defn         => DefinitionNode::Method::Instance,
+    :defs         => DefinitionNode::Method::Singleton,
+    :dot2         => LiteralNode::Range,
+    :dot3         => LiteralNode::Range::Exclusive,
     :dregx        => IllegalNode::RegexEvaluationNode,
     :dregx_once   => IllegalNode::RegexEvaluationNode,
-    :dstr         => LiteralNode::StringNode,
+    :dstr         => LiteralNode::String,
     :dsym         => IllegalNode::SymbolEvaluationNode,
-    :dvar         => VariableNode::OtherVariableNode,
-    :dxstr        => LiteralNode::JavaScriptNode,
-    :ensure       => ControlNode::EnsureNode,
-    :evstr        => LiteralNode::StringNode,
-    :false        => ConstantNode::FalseNode,
-    :fcall        => CallNode::MethodNode::ImplicitNode,
+    :dvar         => VariableNode::OtherVariable,
+    :dxstr        => LiteralNode::Uninterpreted,
+    :ensure       => ControlNode::Ensure,
+    :evstr        => LiteralNode::String,
+    :false        => ConstantNode::False,
+    :fcall        => CallNode::Method::ImplicitReceiver,
     :flip2        => IllegalNode::FlipflopNode,
     :flip3        => IllegalNode::FlipflopNode,
-    :for          => ControlNode::ForNode,
-    :gasgn        => AssignmentNode::GlobalVariableNode,
-    :gvar         => VariableNode::GlobalVariableNode,
-    :hash         => LiteralNode::HashNode,
-    :iasgn        => AssignmentNode::InstanceVariableNode,
-    :if           => ConditionalNode::IfNode,
-    :iter         => CallNode::BlockNode,
-    :ivar         => VariableNode::InstanceVariableNode,
-    :lasgn        => AssignmentNode::LocalVariableNode,
-    :lvar         => VariableNode::OtherVariableNode,
-    :lit          => LiteralNode::OtherNode,
+    :for          => ControlNode::For,
+    :gasgn        => AssignmentNode::GlobalVariable,
+    :gvar         => VariableNode::GlobalVariable,
+    :hash         => LiteralNode::Hash,
+    :iasgn        => AssignmentNode::InstanceVariable,
+    :if           => LogicNode::If,
+    :iter         => CallNode::Block,
+    :ivar         => VariableNode::InstanceVariable,
+    :lasgn        => AssignmentNode::LocalVariable,
+    :lvar         => VariableNode::OtherVariable,
+    :lit          => LiteralNode::Other,
     :match        => IllegalNode::MatchNode,
-    :match2       => CallNode::MatchNode,
-    :match3       => CallNode::MatchNode::ReverseNode,
+    :match2       => CallNode::Match,
+    :match3       => CallNode::Match::Reverse,
     :masgn        => IllegalNode::MultipleAssignmentNode,
-    :module       => DefinitionNode::ModuleNode,
-    :next         => ConstantNode::NextNode,
-    :nil          => ConstantNode::NilNode,
-    :not          => WrapNode::NotNode,
-    :op_asgn1     => AssignmentNode::OperatorNode::BracketNode,
-    :op_asgn2     => AssignmentNode::OperatorNode::DotNode,
-    :op_asgn_and  => AssignmentNode::OperatorNode::AndNode,
-    :op_asgn_or   => AssignmentNode::OperatorNode::OrNode,
-    :or           => ConjunctionNode::OrNode,
+    :module       => DefinitionNode::Module,
+    :next         => ConstantNode::Next,
+    :nil          => ConstantNode::Nil,
+    :not          => WrapNode::Not,
+    :op_asgn1     => AssignmentNode::Operator::Bracket,
+    :op_asgn2     => AssignmentNode::Operator::Dot,
+    :op_asgn_and  => AssignmentNode::Operator::And,
+    :op_asgn_or   => AssignmentNode::Operator::Or,
+    :or           => LogicNode::Conjunction::Or,
     :postexe      => IllegalNode::PostexeNode,
     :redo         => IllegalNode::RedoNode,
-    :rescue       => ControlNode::RescueNode,
+    :rescue       => ControlNode::Rescue,
     :retry        => IllegalNode::RetryNode,
-    :return       => WrapNode::ReturnNode,
-    :sclass       => DefinitionNode::ObjectLiteralNode,
-    :scope        => LiteralNode::OtherNode,
-    :self         => ConstantNode::SelfNode,
-    :splat        => LiteralNode::SplatNode,
-    :super        => WrapNode::SuperNode,
-    :svalue       => LiteralNode::OtherNode,
-    :str          => LiteralNode::StringNode,
-    :true         => ConstantNode::TrueNode,
+    :return       => WrapNode::Return,
+    :sclass       => DefinitionNode::SingletonClass,
+    :scope        => LiteralNode::Other,
+    :self         => ConstantNode::Self,
+    :splat        => LiteralNode::Splat,
+    :super        => WrapNode::Super,
+    :svalue       => LiteralNode::Other,
+    :str          => LiteralNode::String,
+    :true         => ConstantNode::True,
     :undef        => IllegalNode::UndefNode,
-    :until        => ControlNode::UntilNode,
-    :vcall        => VariableNode::OtherVariableNode,
-    :when         => ConditionalNode::WhenNode,
-    :while        => ControlNode::WhileNode,
-    :xstr         => LiteralNode::JavaScriptNode,
-    :yield        => WrapNode::YieldNode,
-    :zarray       => LiteralNode::ArrayNode,
-    :zsuper       => WrapNode::SuperNode
+    :until        => ControlNode::Loop::Until,
+    :vcall        => VariableNode::OtherVariable,
+    :when         => LogicNode::Case::When,
+    :while        => ControlNode::Loop::While,
+    :xstr         => LiteralNode::Uninterpreted,
+    :yield        => WrapNode::Yield,
+    :zarray       => LiteralNode::Array,
+    :zsuper       => WrapNode::Super
   }
   
   DATA_NODES = {
-    Bignum        => DataNode::OtherNode,
-    Fixnum        => DataNode::OtherNode,
-    Float         => DataNode::OtherNode,
-    Range         => DataNode::RangeNode,
-    Regexp        => DataNode::OtherNode,
-    Symbol        => DataNode::SymbolNode,
-    String        => DataNode::StringNode,
-    NilClass      => DataNode::NilNode
+    Bignum        => DataNode::Other,
+    Fixnum        => DataNode::Other,
+    Float         => DataNode::Other,
+    Range         => DataNode::Range,
+    Regexp        => DataNode::Other,
+    Symbol        => DataNode::Symbol,
+    String        => DataNode::String,
+    NilClass      => DataNode::Nil
   }
   
-  def build_node # :nodoc:
+  def zoop(options = {})
     case self
     when Array
       raise(BuildError::UnknownNode, "Don't know how to handle sexp type :#{self.first}") unless ARRAY_NODES[self.first]
-      return ARRAY_NODES[self.first].new(*self[1..-1])
+      return ARRAY_NODES[self.first].new(*(self[1..-1] + [options]))
     else
-      return DATA_NODES[self.class].new(self)
+      return DATA_NODES[self.class].new(self, options)
     end
-  rescue => e
-    self.handle_red_error(e)
-  end
-  
-  def build_nodes  # :nodoc:
-    self.map {|node| node.build_node}
-  end
-  
-  def compile_nodes(options = {}) # :nodoc:
-    self.map {|node| node.compile_node(options)}
   end
   
   def string_to_node # :nodoc:
@@ -163,5 +153,9 @@ module Red
   
   def self.rails
     require 'red/plugin'
+  end
+  
+  def s
+    self.gsub(/\$(\$*\w*)\(/,"_z_d\\0").gsub('_z_d$','_z_d').gsub('_z_d$','_z_dd')
   end
 end

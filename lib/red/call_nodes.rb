@@ -1,25 +1,29 @@
 module Red
-  class CallNode # :nodoc:
-    class BlockNode # :nodoc:
-      def initialize(receiver, arguments_array, expression = nil)
-        @receiver, @expression = [receiver, expression].build_nodes
-        @arguments = (((arguments_array ||= []).first == :masgn) ? arguments_array.assoc(:array)[1..-1].map {|node| node.last} : [arguments_array.last]).build_nodes
+  class CallNode < String # :nodoc:
+    class Block < CallNode # :nodoc:
+      def initialize(receiver, block_args, *args)
+        options = args.pop
+        expression = args[0].is_a?(Array) && args[0][0] == :block ? args[0] : [:block, args[0] || [:nil]]
+        block_arguments = (block_args.is_a?(Array) && block_args.first == :masgn) ? block_args.assoc(:array)[1..-1].map { |dasgn_curr| dasgn_curr.last.zoop(:as_argument => true) } : [(block_args.last rescue nil).zoop(:as_argument => true)]
+        block = "function(%s) { %s; }" % [block_arguments.join(', '), expression.zoop(:force_return => true)]
+        if  [:proc, :lambda].include?(receiver.last)
+          self << block
+        else
+          receiver_arguments = receiver.assoc(:array) ? receiver.assoc(:array)[1..-1].map {|arg| arg.zoop(:as_argument => true)} : []
+          object = receiver.reject{|sexp| sexp.is_a?(Array) && sexp.first == :array}.zoop(:suppress_arguments => true)
+          self << "%s(%s)" % [object, (receiver_arguments + [block]).compact.join(', ')]
+        end
       end
       
-      def compile_node(options = {})
-        receiver = @receiver.compile_node.gsub(/\(\)$/,'')
-        arguments = @arguments.compile_nodes.join(', ')
-        expression = @expression.compile_node
-        case receiver.to_sym
-        when :lambda, :function, :proc
-          "function(%s) { %s }" % [arguments, expression]
-        else
-          "%s(function(%s) { %s })" % [receiver, arguments, expression]
+      class Ampersand < Block # :nodoc:
+        def initialize(block_name, function_call, options)
+          function_call.assoc(:array) ? function_call.assoc(:array) << block_name : function_call << [:array, block_name]
+          self << function_call.zoop(options)
         end
       end
     end
     
-    class MatchNode # :nodoc:
+    class Match # :nodoc:
       def initialize(regex, expression)
         @regex, @expression = [regex, expression].build_nodes
       end
@@ -30,63 +34,51 @@ module Red
         "%s.match(%s)" % [regex, expression]
       end
       
-      class ReverseNode < MatchNode # :nodoc:
+      class Reverse < Match # :nodoc:
         def initialize(expression, regex)
           @regex, @expression = [regex, expression].build_nodes
         end
       end
     end
     
-    class MethodNode # :nodoc:
-      def compile_node(options = {})
-        receiver = @receiver.compile_node(:as_receiver => true)
-        function = @function.compile_node(:quotes => '')
-        arguments = @arguments.compile_nodes(:as_argument => true, :quotes => "'")
-        return ("$%s(%s)" % [receiver = ((receiver == '$-') || (receiver == 'id' && @@red_library == :Prototype) ? nil : receiver), arguments.first]).gsub('$$','$').gsub('$class','$$') if @receiver.is_a?(VariableNode::GlobalVariableNode) && function == '-'
-        case function.to_sym
-        when :-, :+, :<, :>, :>=, :<=, :%, :*, :/, :^, :==, :===, :instanceof, :in
-          "(%s %s %s)" % [receiver, function, arguments.first]
-        when :raise
-          "throw(%s)" % [arguments.first]
-        when :new
-          "new %s(%s)" % [receiver, arguments.join(', ')]
-        when :var
-          "var %s" % [arguments.join(', ')]
+    class Method < CallNode # :nodoc:
+      def sugar(receiver, function, args, options)
+        object = receiver.zoop(:as_argument => true)
+        arguments = "(%s)" % [args.assoc(:array) ? args.assoc(:array)[1..-1].map {|arg| arg.zoop(:as_argument => true)} : []].join(', ') unless options[:suppress_arguments]
+        single_arg = (args.assoc(:array)[1] rescue nil).zoop(:as_argument => true)
+        case function
+        when :-, :+, :<, :>, :>=, :<=, :%, :*, :/, :^, :==, :===, :in, :instanceof
+          string = options[:as_argument] ? "(%s %s %s)" : "%s %s %s"
+          self << string % [object, function.zoop, single_arg]
         when :[]
-          if ([:symbol, :string].include?(@arguments.first.data_type) rescue false)
-            arguments = @arguments.compile_nodes(:quotes => "", :as_argument => true)
-            "%s.%s"
+          object = "this" if receiver.nil?
+          args = args.assoc(:array) ? args.assoc(:array)[1..-1] : []
+          if args.assoc(:str) || args.assoc(:lit) && args.assoc(:lit)[1].is_a?(Symbol)
+            self << "%s.$%s" % [object, args[0][1]]
           else
-            "%s[%s]"
-          end % [receiver, arguments.first]
-        when :_
-          "%s(%s)" % [receiver, arguments]
+            self << "%s[%s]" % [object, single_arg]
+          end
+        when :raise
+          self << "throw(%s)" % [single_arg]
+        when :new
+          self << "new %s%s" % [object, arguments]
         else
-          receiver += '.' unless receiver.empty?
-          "%s%s(%s)" % [receiver, function, arguments.join(', ')]
+          object = receiver.nil? ? "" : "%s." % [object]
+          self << "%s%s%s" % [object, function.zoop, arguments]
         end
       end
       
-      def matches_receiver(receiver)
-        return (receiver.compile_node == @receiver.compile_node) rescue false
-      end
-      
-      def increment_operator
-        return @function.compile_node if ['+', '-'].include?(@function.compile_node) && @arguments.first.compile_node == '1'
-      end
-      
-      class ExplicitNode < MethodNode # :nodoc:
-        def initialize(receiver, function, arguments = [nil])
-          @receiver, @function = [receiver, function].build_nodes
-          @arguments = arguments[1..-1].build_nodes
+      class ExplicitReceiver < Method # :nodoc:
+        def initialize(receiver, function, *args)
+          options = args.pop
+          self.sugar(receiver, function, args, options)
         end
       end
       
-      class ImplicitNode < MethodNode # :nodoc:
-        def initialize(function, arguments = [nil])
-          @function = function.build_node
-          @receiver = (:self if @function.compile_node == '[]').build_node
-          @arguments = arguments[1..-1].build_nodes
+      class ImplicitReceiver < Method # :nodoc:
+        def initialize(function, *args)
+          options = args.pop
+          self.sugar(nil, function, args, options)
         end
       end
     end

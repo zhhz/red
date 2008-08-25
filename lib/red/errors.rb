@@ -9,11 +9,6 @@ module Red
     class NoArbitraryMatch < BuildError # :nodoc:
     end
     
-    # Raised when a +rescue+ block is placed in a way that would produce a
-    # JavaScript syntax error.
-    class NoArbitraryRescue < BuildError # :nodoc:
-    end
-    
     # Raised when a +BEGIN+ or +END+ block is used.
     class NoBEGINorEND < BuildError # :nodoc:
     end
@@ -31,11 +26,6 @@ module Red
     class NoClassInheritance < BuildError # :nodoc:
     end
     
-    # Raised when the active JavaScript library does not support calls to
-    # class variables or declarations of class variables.
-    class NoClassVariables < BuildError # :nodoc:
-    end
-    
     # Raised when a +redo+ or +retry+ keyword is used.
     class NoDoOvers < BuildError # :nodoc:
     end
@@ -45,15 +35,11 @@ module Red
     class NoFlipflops < BuildError # :nodoc:
     end
     
-    # Raised when a +begin+ block is used for multiline assignment.
-    class NoMultilineAssignment < BuildError # :nodoc:
-    end
-    
     # Raised when a comma-separated multiple assignment expression is used.
     class NoMultipleAssignment < BuildError # :nodoc:
     end
     
-    # Raised when a +break+ keyword is followed by an argument.
+    # Raised when a +next+ keyword is followed by an argument.
     class NoNextArguments < BuildError # :nodoc:
     end
     

@@ -1,129 +1,74 @@
 module Red
-  class ControlNode # :nodoc:
-    class BeginNode # :nodoc:
-      def initialize(body)
-        @@rescue_is_safe = (body.first == :rescue)
-        @body = body.build_node
-      end
-      
-      def compile_node(options = {})
-        "%s" % [@body.compile_node]
+  class ControlNode < String # :nodoc:
+    class Begin < ControlNode # :nodoc:
+      def initialize(body, options)
+        self << body.zoop(:force_return => true)
       end
     end
     
-    class EnsureNode # :nodoc:
-      def initialize(attempted, ensure_body)
-        @@rescue_is_safe = @ensure_from_rescue = attempted.first == :rescue
-        @attempted, @ensured = [attempted, ensure_body].build_nodes
-      end
-      
-      def compile_node(options = {})
-        if @ensure_from_rescue
-          "%s finally { %s; }" 
-        else
-          "try { %s; } finally { %s; }"
-        end % self.compile_internals
-      end
-      
-      def compile_internals(options = {})
-        return [@attempted, @ensured].compile_nodes
+    class Ensure < ControlNode # :nodoc:
+      def initialize(attempted, ensure_body, options)
+        string = (attempted.first == :rescue) ? "%s finally { %s; }" : "try { %s; } finally { %s; }"
+        string = options[:as_argument] ? "function() { %s; }()" % [string] : string
+        attempted = (attempted.is_a?(Array) && [:block, :rescue].include?(attempted.first)) ? attempted : [:block, attempted]
+        ensure_body = (ensure_body.is_a?(Array) && ensure_body.first) == :block ? ensure_body : [:block, ensure_body]
+        self << string % [attempted.zoop(:force_return => options[:as_argument]), ensure_body.zoop(:force_return => options[:as_argument])]
       end
     end
     
-    class ForNode # :nodoc:
-      def initialize(source, iterator, body)
-        @properties_loop = ([:property, :key].include?(iterator.last))
-        @source, @iterator, @body = [source, iterator.last, body].build_nodes
-      end
-      
-      def compile_node(options = {})
-        source = @source.compile_node(:as_argument => true)
-        iterator = @iterator.compile_node
-        body = @body.compile_node
-        if @properties_loop
-          "for (var property in %s) { %s; }" % [source, body]
-        else
-          "for (var %s = 0, end = %s.length; %s < end; ++%s) { %s; }" % [iterator, source, iterator, iterator, body]
-        end
-      end
-    end
-    
-    class RescueNode # :nodoc:
-      def initialize(attempted, rescue_body)
-        raise(BuildError::NoArbitraryRescue, "JavaScript does not support arbitrary placement of rescue/try blocks") unless @@rescue_is_safe
-        raise(BuildError::NoSpecificRescue, "JavaScript does not support rescuing of specific exception classes") unless !rescue_body[1]
-        @@rescue_is_safe == false
-        @attempted = attempted.build_node
+    class Rescue < ControlNode # :nodoc:
+      def initialize(attempted, rescue_body, options)
+        #raise(BuildError::NoSpecificRescue, "JavaScript does not support rescuing of specific exception classes") unless !rescue_body[1]
+        string = "try { %s; } catch(%s) { %s; }"
+        string = options[:as_argument] ? "function() { %s; }()" % [string] : string
         if (block = (rescue_body.assoc(:block) || [])[1..-1]) && block.first.last == [:gvar, %s($!)]
-          exception_node = block.shift
-          @exception_variable = exception_node[1].build_node
-          @rescued = block.unshift(:block).build_node
+          exception_variable = block.shift[1].zoop
+          rescued = block.unshift(:block)
         else
-          @exception_variable = :e.build_node
-          @rescued = rescue_body[2].build_node
+          exception_variable = :e
+          rescued = rescue_body[2].is_a?(Array) && rescue_body[2].first == :block ? rescue_body[2] : [:block, rescue_body[2]]
         end
-      end
-      
-      def compile_node(options = {})
-        return "try { %s; } catch(%s) { %s; }" % self.compile_internals
-      end
-      
-      def compile_internals(options = {})
-        return [@attempted, @exception_variable, @rescued].compile_nodes
+        attempted = attempted.is_a?(Array) && attempted.first == :block ? attempted : [:block, attempted]
+        self << string % [attempted.zoop(:force_return => options[:as_argument] || options[:force_return]), exception_variable, rescued.zoop(:force_return => options[:as_argument] || options[:force_return])]
       end
     end
     
-    class UntilNode # :nodoc:
-      def initialize(condition, body, run_only_if_condition_met)
-        @condition, @body = [condition, body].build_nodes
-        @do_while_loop = !run_only_if_condition_met
-      end
-      
-      def compile_node(options = {})
-        if @do_while_loop
-          return "do { %s; } while (!(%s))" % self.compile_internals.reverse
+    class For < ControlNode # :nodoc:
+      def initialize(source, iterator, body, options)
+        if [:xstr, :dxstr].include?(source.first)
+          self << "for (%s) { %s; }" % [source.zoop, body.zoop]
         else
-          return "while (!(%s)) { %s; }" % self.compile_internals
+          self << "for (var %s in %s) { %s; }" % [iterator.zoop, source.zoop(:as_argument => true), body.zoop]
         end
-      end
-      
-      def compile_internals(options = {})
-        condition = @condition.compile_node(:skip_var => true, :as_argument => true)
-        body = @body.compile_node
-        return [condition, body]
       end
     end
     
-    class WhileNode # :nodoc:
-      def initialize(condition, body, run_only_if_condition_met)
-        @condition, @body = [condition, body].build_nodes
-        @do_while_loop = !run_only_if_condition_met
-      end
-      
-      def compile_node(options = {})
-        if @do_while_loop
-          return "do { %s; } while (%s)" % self.compile_internals.reverse
+    class Loop < ControlNode # :nodoc:
+      def initialize(condition, body, run_only_if_condition_met, options)
+        condition = (self.is_a?(UntilNode) ? "!(%s)" : "%s") % [condition.zoop(:as_argument => true)]
+        if run_only_if_condition_met
+          self << "while (%s) { %s; }" % [condition, body.zoop]
         else
-          return "while (%s) { %s; }" % self.compile_internals
+          self << "do { %s; } while (%s)" % [body.zoop, condition]
         end
       end
       
-      def compile_internals(options = {})
-        condition = @condition.compile_node(:skip_var => true, :as_argument => true)
-        body = @body.compile_node
-        return [condition, body]
+      class Until < Loop # :nodoc:
+      end
+      
+      class While < Loop # :nodoc:
       end
     end
     
-    class LibraryNode # :nodoc:
-      def initialize(library)
-        @@red_library = @library = library
-      end
-      
-      def compile_node(options = {})
-        @@red_library = @library
-        nil
-      end
+    class Library # :nodoc:
+      #def initialize(library)
+      #  @@red_library = @library = library
+      #end
+      #
+      #def compile_node(options = {})
+      #  @@red_library = @library
+      #  nil
+      #end
     end
   end
 end

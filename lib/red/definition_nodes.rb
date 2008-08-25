@@ -1,177 +1,163 @@
 module Red
-  class DefinitionNode # :nodoc:
-    class ClassNode # :nodoc:
-      def initialize(class_name, superclass, scope)
-        raise(BuildError::NoClassInheritance, "Class inheritance is currently not supported#{" for the #{@@red_library} JavaScript library";''}") if superclass
-        old_class = @@red_class
-        @@red_class = @class = class_name
-        @class_name, @superclass = [class_name, superclass].build_nodes
-        block_node = scope.assoc(:block) || scope
-        case @@red_library
-        when :Prototype
-          @initializer = block_node.rassoc(:initialize)
-          @classes = block_node.select {|node| (node.first == :class) rescue false }.build_nodes
-          @properties = block_node.select {|node| (node.first == :cvdecl) rescue false }.build_nodes
-          @functions = block_node.select {|node| ![:block, :scope].include?(node) && ((node.first != :cvdecl) rescue false) }.build_nodes
-        else
-          if initializer_node = block_node.rassoc(:initialize)
-            args_node = initializer_node.assoc(:scope).assoc(:block).assoc(:args)
-            @arguments = (args_node[1..-1] || []).build_nodes
-            @initializer = initializer_node.assoc(:scope).assoc(:block).reject {|node| node == args_node}.build_node
-          end
-          @classes = block_node.select {|node| (node.first == :class) rescue false }.build_nodes
-          @properties = block_node.select {|node| (node.first == :cvdecl) rescue false }.build_nodes
-          @functions = block_node.select {|node| (node != initializer_node) && ![:block, :scope].include?(node) && ((node.first != :cvdecl) rescue false) }.build_nodes
-        end
-        @@red_class = old_class
+  class DefinitionNode < String # :nodoc:
+    def nodes(*node_types)
+      lambda {|node| node.is_a?(Array) && node_types.include?(node.first) }
+    end
+    
+    def attr_sexp(attribute)
+      return [:defn, attribute, [:scope, [:block, [:args], [:ivar, :"@#{attribute}"]]]]
+    end
+    
+    class Class < DefinitionNode # :nodoc:
+      def initialize(class_name, superclass, scope, options)
+        # Add the string name of this module to the namespace hierarchy.
+        @@namespace_stack.push(class_name.zoop)
+        namespaced_class = @@namespace_stack.join('.')
+        
+        # Split out the various pieces needed to emulate class behavior.
+        block = scope.assoc(:block) || scope
+        attrs      = block.rassoc(:attr) ? block.delete(block.rassoc(:attr)).assoc(:array)[1..-1].map {|node| self.attr_sexp(node.last.to_sym).zoop(:as_property => true) } : []
+        arguments  = block.rassoc(:initialize).assoc(:scope).assoc(:block).assoc(:args)[1..-1] || []
+        properties = block.select(&nodes(:cvdecl))
+        functions  = block.select(&nodes(:defn))
+        modules    = block.select(&nodes(:module))
+        classes    = block.select(&nodes(:class))
+        class_eval = block.reject(&nodes(:cvdecl, :defn, :module, :class))
+        
+        # Combine and compile.
+        arguments  = arguments.map {|argument| argument.zoop(:as_argument => true)}
+        functions  = attrs + functions.map {|function| function.zoop(:as_property => true)}
+        properties = properties.map {|property| property.zoop(:as_property => true)}
+        children = (modules + classes).map {|node| node.zoop }
+        constructor = "%s%s = function %s(%s) { this.initialize.apply(this, arguments) }" % [("var " unless namespaced_class.include?('.')), namespaced_class, class_name, arguments.join(', ')]
+        instance_methods = "for (var x in _mod = { %s }) { %s.prototype[x] = _mod[x] }" % [functions.join(', '), namespaced_class] unless functions.empty?
+        class_variables = "for (var x in _mod = { %s }) { %s[x] = _mod[x] }" % [properties.join(', '), namespaced_class] unless properties.empty?
+        
+        # Return the compiled JavaScript string.
+        self << [constructor, instance_methods, class_variables, children.join('; '), (class_eval.zoop rescue '')].compact.reject {|x| x.empty?}.join('; ')
+        
+        # Go back up one level in the namespace hierarchy, and add this
+        # to the list of classes that Red knows about.
+        @@red_classes |= [namespaced_class]
+        @@namespace_stack.pop
       end
       
-      def compile_node(options = {})
-        old_class = @@red_class
-        @@red_class = @class
-        if options[:as_prototype]
-          output = self.compile_as_child_class
-        elsif @initializer
-          case @@red_library
-          when :Prototype
-            output = self.compile_as_prototype_class
+      # Pull the "initialize" method from the class definition, or inherit
+      # it from the superclass; then link the initializer to this class for
+      # future inheritance.
+      # @superclass = superclass.build_node
+      # initializer_node = @@red_initializers[@@namespace_stack.join('.')] = (block_node = scope.assoc(:block) || scope).rassoc(:initialize) || @@red_initializers[@superclass.compile_node] || @@red_initializers['']
+      
+      # Build nodes for the initializer and for its arguments.
+      # args_node = initializer_node.assoc(:scope).assoc(:block).assoc(:args)
+      # @arguments = (args_node[1..-1] || []).build_nodes
+      # @initializer = initializer_node.assoc(:scope).assoc(:block).reject { |node| node == args_node }.build_node
+      # @functions  = block_node.select(&nodes(:defn)).build_nodes#.reject {|node| node[1] == :initialize }.build_nodes
+      
+      # If the superclass is not one of the recognized namespaces, prefix it
+      # with the current namespace.
+      # superclass = @superclass.compile_node
+      # superclass = (@@namespace_stack + [superclass]).join('.') unless superclass.empty? || @@red_classes.include?(superclass)
+      
+      # Determine whether this is a reopened class.
+      # reopened = @@red_classes.include?(namespaced_class)
+      
+      # initializer = @initializer.compile_node(:no_return => true)
+      
+      # Compile the pieces into JavaScript strings.
+      # inheritance = "for (var x in %s) { %s[x] = %s[x] }; %s.prototype = new %s" % [superclass, namespaced_class, superclass, namespaced_class, superclass] unless superclass.empty?
+    end
+    
+    class Module < DefinitionNode # :nodoc:
+      def initialize(module_name, scope, options)
+        # Add the string name of this module to the namespace hierarchy.
+        @@namespace_stack.push(module_name.zoop)
+        namespaced_module = @@namespace_stack.join('.')
+        
+        # Split out the various pieces needed to emulate module behavior.
+        block = scope.assoc(:block) || scope
+        properties  = block.select(&nodes(:cvdecl))
+        functions   = block.select(&nodes(:defn))
+        modules     = block.select(&nodes(:module))
+        classes     = block.select(&nodes(:class))
+        module_eval = block.reject(&nodes(:cvdecl, :defn, :module, :class))
+        
+        # Combine and compile.
+        slots = (properties + functions).map {|node| node.zoop(:as_property => true)}
+        children = (modules + classes).map {|node| node.zoop }
+        constructor = "%s%s = { %s }" % [("var " unless namespaced_module.include?('.')), namespaced_module, slots.join(', ')]
+        
+        # Return the compiled JavaScript string.
+        self << [constructor, children.join('; '), (module_eval.zoop rescue '')].reject {|x| x.empty?}.join('; ')
+        
+        # Go back up one level in the namespace hierarchy, and add this module
+        # to the list of modules that Red knows about.
+        @@red_modules |= [namespaced_module]
+        @@namespace_stack.pop
+      end
+      
+      #def initialize(module_name, scope)
+      #  # Pull any "initialize" method from the module definition and link it
+      #  # to this class for future inclusion.
+      #  @@red_initializers[@@namespace_stack.join('.')] = (block_node = scope.assoc(:block) || scope).rassoc(:initialize) || @@red_initializers['']
+      #  
+      #  @functions  = block_node.select(&nodes(:defn)).reject {|node| node[1] == :initialize }.build_nodes
+      #end
+    end
+    
+    class Method < DefinitionNode # :nodoc:
+      def args_and_contents_from(block)
+        block_arg = block.delete(block.assoc(:block_arg))
+        arguments = block.delete(block.assoc(:args))[1..-1] || []
+        defaults = arguments.delete(arguments.assoc(:block))
+        arguments = (block_arg ? arguments << block_arg.last : arguments).map {|arg| arg.zoop(:as_argument => true)}
+        contents = [defaults.zoop(:as_default => true), block.zoop(:force_return => true)].reject {|x| x.empty? }.join('; ')
+        return [arguments, contents]
+      end
+      
+      class Instance < Method # :nodoc:
+        def initialize(function_name, scope, options)
+          function = function_name.zoop
+          block = scope.assoc(:block)
+          arguments, contents = self.args_and_contents_from(block)
+          if options[:as_property]
+            self << "%s: function %s(%s) { %s; }" % [function, function, arguments.join(', '), contents]
           else
-            output = self.compile_as_standard_class
+            self << "function %s(%s) { %s; }" % [function, arguments.join(', '), contents]
           end
-        else
-          output = self.compile_as_virtual_class
         end
-        @@red_class = old_class
-        return output
       end
       
-      def compile_as_child_class
-        class_name = @class_name.compile_node
-        slots = (@classes | @properties | @functions).compile_nodes(:as_prototype => true).compact.join(', ')
-        return "%s: { %s }" % [class_name, slots]
-      end
-      
-      def compile_as_prototype_class
-        class_name = @class_name.compile_node
-        functions = @functions.compile_nodes(:as_prototype => true).compact.join(', ')
-        properties = @properties.compile_nodes(:as_prototype => true).compact.join(', ')
-        return "%s%s = Class.create({ %s });Object.extend(%s, { %s })" % [self.var?, class_name, functions, class_name, properties]
-      end
-      
-      def compile_as_standard_class(options = {})
-        class_name = @class_name.compile_node
-        arguments = @arguments.compile_nodes.join(', ')
-        initializer = @initializer.compile_node
-        functions = @functions.compile_nodes(:as_attribute => true).join('; ')
-        properties = @properties.compile_nodes.join('; ')
-        return "%s%s = function %s(%s) { %s;%s }; %s" % [self.var?, class_name, class_name, arguments, initializer, functions, properties]
-      end
-      
-      def compile_as_virtual_class(options = {})
-        class_name = @class_name.compile_node
-        slots = (@properties | @functions).compile_nodes(:as_prototype => true).compact.join(', ')
-        return "%s%s = { %s }" % [self.var?, class_name, slots]
-      end
-      
-      def var?
-        return "var " unless @class_name.is_a?(LiteralNode::NamespaceNode)
+      class Singleton < Method # :nodoc:
+        def initialize(object, function_name, scope, options)
+          function = function_name.zoop
+          receiver = "%s.%s" % [(object == [:self] ? @@namespace_stack.join('.') : object.zoop), function]
+          block = scope.assoc(:args) ? (scope << [:block, scope.delete(scope.assoc(:args)), [:nil]]).assoc(:block) : scope.assoc(:block)
+          block << [:nil] if block.assoc(:block_arg) == block.last
+          arguments, contents = self.args_and_contents_from(block)
+          self << "%s = function %s(%s) { %s; }" % [receiver, function, arguments.join(', '), contents]
+        end
       end
     end
     
-    class ClassMethodNode # :nodoc:
-      def initialize(receiver, function_name, scope)
-        @receiver, @function_name = [receiver, function_name].build_nodes
-        @arguments = (scope.assoc(:block).assoc(:args)[1..-1] || []).build_nodes
-        @lines = (scope.assoc(:block)[2..-1] || []).build_nodes
-      end
-      
-      def compile_node(options = {})
-        case false
-        when options[:as_attribute].nil?
-          "this.%s = function(%s) { %s; }"
-        when options[:as_prototype].nil?
-          "%s: function(%s) { %s; }"
-        when !(options[:as_attribute].nil? && options[:as_prototype].nil?)
-          "function %s(%s) { %s; }"
-        end % self.compile_internals
-      end
-      
-      def compile_internals(options = {})
-        function_name = @function_name.compile_node
-        arguments = @arguments.compile_nodes.join(', ')
-        lines = @lines.compile_nodes.compact.join('; ')
-        return [function_name, arguments, lines]
-      end
-    end
-    
-    class InstanceMethodNode # :nodoc:
-      def initialize(function_name, scope)
-        block = scope.assoc(:block)
-        @@rescue_is_safe = (block[2].first == :rescue)
-        @function_name = (function_name == :function ? nil : function_name).build_node
-        @arguments = (block.assoc(:args)[1..-1] || []).build_nodes
-        @lines = (block[2..-1] || []).build_nodes
-      end
-      
-      def compile_node(options = {})
-        case false
-        when options[:as_attribute].nil?
-          "this.%s = function(%s) { %s; }"
-        when options[:as_prototype].nil?
-          "%s: function(%s) { %s; }"
-        when !(options[:as_attribute].nil? && options[:as_prototype].nil?)
-          "function %s(%s) { %s; }"
-        end % self.compile_internals
-      end
-      
-      def compile_internals(options = {})
-        function_name = @function_name.compile_node
-        arguments = @arguments.compile_nodes.join(', ')
-        lines = @lines.compile_nodes.compact.join('; ')
-        return [function_name, arguments, lines]
-      end
-    end
-    
-    class ModuleNode # :nodoc:
-      def initialize(module_name, scope)
-        old_module = @@red_module
-        @@red_module = module_name
-        @module_name, @scope = [module_name, scope].build_nodes
-        @@red_module = old_module
-      end
-      
-      def compile_node(options = {})
-        return "%s" % self.compile_internals
-      end
-      
-      def compile_internals(options = {})
-        old_module = @@red_module
-        @@red_module = @module_name.compile_node
-        scope = @scope.compile_node
-        @@red_module = old_module
-        return [scope]
-      end
-    end
-    
-      
-    class ObjectLiteralNode # :nodoc:
-      def initialize(receiver, scope)
-        old_class = @@red_class
-        @@red_class = @class = receiver.build_node.compile_node
-        block_node = scope.assoc(:block) || scope
-        properties = block_node.select {|node| (node.first == :cvdecl) rescue false }
-        functions = block_node.select {|node| ![:block, :scope].include?(node) }
-        @slots = (properties | functions).build_nodes
-        @@red_class = old_class
-      end
-      
-      def compile_node(options = {})
-        old_class = @@red_class
-        @@red_class = @class
-        slots = @slots.compile_nodes(:as_prototype => true).compact.join(', ')
-        @@red_class = old_class
-        return "{ %s }" % [slots]
-      end
+    class SingletonClass < DefinitionNode # :nodoc:
+      #def initialize(receiver, scope)
+      #  old_class = @@red_class
+      #  @@red_class = @class = receiver.build_node.compile_node
+      #  block_node = scope.assoc(:block) || scope
+      #  properties = block_node.select {|node| (node.first == :cvdecl) rescue false }
+      #  functions = block_node.select {|node| ![:block, :scope].include?(node) }
+      #  @slots = (properties | functions).build_nodes
+      #  @@red_class = old_class
+      #end
+      #
+      #def compile_node(options = {})
+      #  old_class = @@red_class
+      #  @@red_class = @class
+      #  slots = @slots.compile_nodes(:as_property => true).compact.join(', ')
+      #  @@red_class = old_class
+      #  return "{ %s }" % [slots]
+      #end
     end
   end
 end

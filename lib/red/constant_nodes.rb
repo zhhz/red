@@ -1,47 +1,33 @@
 module Red
-  class ConstantNode # :nodoc:
-    class BreakNode < ConstantNode # :nodoc:
-      def initialize(*args)
-        raise(BuildError::NoBreakArguments, "Break can't take an argument in JavaScript") unless args.empty?
-      end
-      
-      def compile_node(options = {})
-        return "break"
-      end
+  class ConstantNode < String # :nodoc:
+    def initialize(*args)
+      self << self.class::STRING
+      # raise(BuildError::NoBreakArguments, "Break can't take an argument in JavaScript") unless args.empty?
+      # raise(BuildError::NoNextArguments, "Next/continue can't take an argument in JavaScript") unless args.empty?
     end
     
-    class FalseNode < ConstantNode # :nodoc:
-      def compile_node(options = {})
-        return "false"
-      end
+    class Break < ConstantNode # :nodoc:
+      STRING = "break"
     end
     
-    class NextNode < ConstantNode # :nodoc:
-      def initialize(*args)
-        raise(BuildError::NoNextArguments, "Next/continue can't take an argument in JavaScript") unless args.empty?
-      end
-      
-      def compile_node(options = {})
-        return "continue"
-      end
+    class False < ConstantNode # :nodoc:
+      STRING = "false"
     end
     
-    class NilNode < ConstantNode # :nodoc:
-      def compile_node(options = {})
-        return "null"
-      end
+    class Next < ConstantNode # :nodoc:
+      STRING = "continue"
     end
     
-    class SelfNode < ConstantNode # :nodoc:
-      def compile_node(options = {})
-        return "this"
-      end
+    class Nil < ConstantNode # :nodoc:
+      STRING = "null"
     end
     
-    class TrueNode < ConstantNode # :nodoc:
-      def compile_node(options = {})
-        return "true"
-      end
+    class Self < ConstantNode # :nodoc:
+      STRING = "this"
+    end
+    
+    class True < ConstantNode # :nodoc:
+      STRING = "true"
     end
   end
 end

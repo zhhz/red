@@ -1,37 +1,25 @@
 module Red
-  class VariableNode # :nodoc:
-    def initialize(variable_name)
-      @variable_name = variable_name.build_node
+  class VariableNode < String # :nodoc:
+    def initialize(variable_name, options)
+      self << variable_name.zoop
     end
     
-    def compile_node(options = {})
-      return "%s" % self.compile_internals
-    end
-    
-    def compile_internals(options = {})
-      return [@variable_name.compile_node]
-    end
-    
-    class ClassVariableNode < VariableNode # :nodoc:
-      def compile_node(options = {})
-        return "%s.%s" % self.compile_internals
-      end
-      
-      def compile_internals(options = {})
-        return [@@red_class, @variable_name.compile_node]
+    class ClassVariable < VariableNode # :nodoc:
+      def initialize(variable_name, options)
+        self << "%s.$$%s" % [@@namespace_stack.join('.'), variable_name.zoop]
       end
     end
     
-    class InstanceVariableNode < VariableNode # :nodoc:
-      def compile_node(options = {})
-        return "this.%s" % self.compile_internals
+    class InstanceVariable < VariableNode # :nodoc:
+      def initialize(variable_name, options = {})
+        self << "this.$%s" % [variable_name.zoop]
       end
     end
     
-    class GlobalVariableNode < VariableNode # :nodoc:
+    class GlobalVariable < VariableNode # :nodoc:
     end
     
-    class OtherVariableNode < VariableNode # :nodoc:
+    class OtherVariable < VariableNode # :nodoc:
     end
   end
 end
