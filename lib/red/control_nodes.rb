@@ -38,7 +38,7 @@ module Red
         if [:xstr, :dxstr].include?(source.first)
           self << "for (%s) { %s; }" % [source.zoop, body.zoop]
         else
-          self << "for (var %s in %s) { %s; }" % [iterator.zoop, source.zoop(:as_argument => true), body.zoop]
+          self << "for (var %s in %s) { %s; }" % [iterator.last.zoop, source.zoop(:as_argument => true), body.zoop]
         end
       end
     end
