@@ -17,8 +17,6 @@ require 'red/variable_nodes'
 require 'red/wrap_nodes'
 
 module Red
-  @@red_library = nil
-  @@red_module  = nil
   @@namespace_stack = []
   @@exception_index = 0
   @@red_classes = %w:Array Hash Fixnum Integer Number Numeric Object Range String:
@@ -124,7 +122,14 @@ module Red
     NilClass      => DataNode::Nil
   }
   
-  def zoop(options = {})
+  def zoop(options = {}, reset = false)
+    if reset
+      @@namespace_stack = []
+      @@exception_index = 0
+      @@red_classes = %w:Array Hash Fixnum Integer Number Numeric Object Range String:
+      @@red_modules = %w:Enumerable Comparable:
+      @@red_initializers = {'' => [:defn, :initialize, [:scope, [:block, [:args], [:nil]]]]}
+    end
     case self
     when Array
       raise(BuildError::UnknownNode, "Don't know how to handle sexp type :#{self.first}") unless ARRAY_NODES[self.first]

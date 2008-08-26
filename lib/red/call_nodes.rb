@@ -50,6 +50,11 @@ module Red
         when :-, :+, :<, :>, :>=, :<=, :%, :*, :/, :^, :==, :===, :in, :instanceof
           string = options[:as_argument] ? "(%s %s %s)" : "%s %s %s"
           self << string % [object, function.zoop, single_arg]
+        when :include
+          namespace = @@namespace_stack.empty? ? 'Object' : @@namespace_stack.join('.')
+          instance_methods = "for (var x in %s) { if (!(x.slice(0,2) == '$$')) { %s.prototype[x] = _mod[x]; }; }" % [single_arg, namespace, single_arg]
+          class_variables = "for (var x in %s) { if (!(x == 'prototype')) { %s[x] = %s[x]; }; }" % [single_arg, namespace, single_arg]
+          self << [instance_methods, class_variables].join(";\n\n")
         when :[]
           object = "this" if receiver.nil?
           args = args.assoc(:array) ? args.assoc(:array)[1..-1] : []

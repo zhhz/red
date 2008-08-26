@@ -38,7 +38,7 @@ module Red
         end
         string = options[:as_argument] ? "function() { %s; }()" : "%s"
         lines = (args.map {|line| line.zoop(options)} + [returner]).compact
-        self << string % [lines.join('; ')]
+        self << string % [lines.join(";\n#{options[:indent] ? '  ' * options[:indent] : "\n"}")]
       end
     end
     
