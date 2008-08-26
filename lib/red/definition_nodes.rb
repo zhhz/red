@@ -11,12 +11,12 @@ module Red
     class Class < DefinitionNode # :nodoc:
       def initialize(class_name, superclass, scope, options)
         # Add the string name of this module to the namespace hierarchy.
-        @@namespace_stack.push(class_name.zoop)
+        @@namespace_stack.push(class_name.red!)
         namespaced_class = @@namespace_stack.join('.')
         
         # Split out the various pieces needed to emulate class behavior.
         block = scope.assoc(:block) || scope
-        attrs      = block.rassoc(:attr) ? block.delete(block.rassoc(:attr)).assoc(:array)[1..-1].map {|node| self.attr_sexp(node.last.to_sym).zoop(:as_property => true) } : []
+        attrs      = block.rassoc(:attr) ? block.delete(block.rassoc(:attr)).assoc(:array)[1..-1].map {|node| self.attr_sexp(node.last.to_sym).red!(:as_property => true) } : []
         arguments  = (block.rassoc(:initialize).assoc(:scope).assoc(:block).assoc(:args)[1..-1] rescue nil) || []
         properties = block.select(&nodes(:cvdecl))
         functions  = block.select(&nodes(:defn))
@@ -27,17 +27,17 @@ module Red
         class_eval = class_eval.reject {|node| node.is_a?(Array) && node[0..1] = [:fcall, :include]}
         
         # Combine and compile.
-        arguments  = arguments.map {|argument| argument.zoop(:as_argument => true)}
-        functions  = attrs + functions.map {|function| function.zoop(:as_property => true)}
-        properties = properties.map {|property| property.zoop(:as_property => true)}
-        children = (modules + classes).map {|node| node.zoop }
+        arguments  = arguments.map {|argument| argument.red!(:as_argument => true)}
+        functions  = attrs + functions.map {|function| function.red!(:as_property => true)}
+        properties = properties.map {|property| property.red!(:as_property => true)}
+        children = (modules + classes).map {|node| node.red! }
         constructor = "%s%s = function %s(%s) { this.initialize.apply(this, arguments) }" % [("var " unless namespaced_class.include?('.')), namespaced_class, class_name, arguments.join(', ')] unless @@red_classes.include?(namespaced_class)
-        included = included.map {|node| node.zoop }
+        included = included.map {|node| node.red! }
         instance_methods = "for (var x in _mod = {\n  %s\n}) { %s.prototype[x] = _mod[x] }" % [functions.join(",\n  \n  "), namespaced_class] unless functions.empty?
         class_variables = "for (var x in _mod = {\n  %s\n}) { %s[x] = _mod[x] }" % [properties.join(",\n  \n  "), namespaced_class] unless properties.empty?
         
         # Return the compiled JavaScript string.
-        self << [constructor, included.join(";\n\n"), instance_methods, class_variables, children.join(";\n\n"), (class_eval.zoop rescue '')].compact.reject {|x| x.empty?}.join(";\n\n")
+        self << [constructor, included.join(";\n\n"), instance_methods, class_variables, children.join(";\n\n"), (class_eval.red! rescue '')].compact.reject {|x| x.empty?}.join(";\n\n")
         
         # Go back up one level in the namespace hierarchy, and add this
         # to the list of classes that Red knows about.
@@ -74,7 +74,7 @@ module Red
     class Module < DefinitionNode # :nodoc:
       def initialize(module_name, scope, options)
         # Add the string name of this module to the namespace hierarchy.
-        @@namespace_stack.push(module_name.zoop)
+        @@namespace_stack.push(module_name.red!)
         namespaced_module = @@namespace_stack.join('.')
         
         # Split out the various pieces needed to emulate module behavior.
@@ -86,13 +86,13 @@ module Red
         module_eval = block.reject(&nodes(:cvdecl, :defn, :module, :class))
         
         # Combine and compile.
-        slots = (properties + functions).map {|node| node.zoop(:as_property => true)}
-        children = (modules + classes).map {|node| node.zoop }
+        slots = (properties + functions).map {|node| node.red!(:as_property => true)}
+        children = (modules + classes).map {|node| node.red! }
         constructor = "%s%s = { }" % [("var " unless namespaced_module.include?('.')), namespaced_module] unless @@red_modules.include?(namespaced_module)
         slots = "for (var x in _mod = {\n  %s\n}) { %s[x] = _mod[x] }" % [slots.join(",\n  \n  "), namespaced_module] unless slots.empty?
         
         # Return the compiled JavaScript string.
-        self << [constructor, slots, children.join(";\n\n"), (module_eval.zoop rescue '')].compact.reject {|x| x.empty?}.join(";\n\n")
+        self << [constructor, slots, children.join(";\n\n"), (module_eval.red! rescue '')].compact.reject {|x| x.empty?}.join(";\n\n")
         
         # Go back up one level in the namespace hierarchy, and add this module
         # to the list of modules that Red knows about.
@@ -114,14 +114,14 @@ module Red
         block_arg = block.delete(block.assoc(:block_arg))
         arguments = block.delete(block.assoc(:args))[1..-1] || []
         defaults = arguments.delete(arguments.assoc(:block))
-        arguments = (block_arg ? arguments << block_arg.last : arguments).map {|arg| arg.zoop(:as_argument => true)}
-        contents = [defaults.zoop(:as_default => true), block.zoop(:force_return => function != 'initialize', :indent => indent)].reject {|x| x.empty? }.join('; ')
+        arguments = (block_arg ? arguments << block_arg.last : arguments).map {|arg| arg.red!(:as_argument => true)}
+        contents = [defaults.red!(:as_default => true), block.red!(:force_return => function != 'initialize', :indent => indent)].reject {|x| x.empty? }.join('; ')
         return [arguments, contents]
       end
       
       class Instance < Method # :nodoc:
         def initialize(function_name, scope, options)
-          function = function_name.zoop
+          function = function_name.red!
           block = scope.assoc(:block)
           indent = options[:as_property] ? 2 : 0
           arguments, contents = self.args_and_contents_from(block, function, indent)
@@ -135,8 +135,8 @@ module Red
       
       class Singleton < Method # :nodoc:
         def initialize(object, function_name, scope, options)
-          function = function_name.zoop
-          receiver = "%s.%s" % [(object == [:self] ? @@namespace_stack.join('.') : object.zoop), function]
+          function = function_name.red!
+          receiver = "%s.%s" % [(object == [:self] ? @@namespace_stack.join('.') : object.red!), function]
           block = scope.assoc(:args) ? (scope << [:block, scope.delete(scope.assoc(:args)), [:nil]]).assoc(:block) : scope.assoc(:block)
           block << [:nil] if block.assoc(:block_arg) == block.last
           arguments, contents = self.args_and_contents_from(block)

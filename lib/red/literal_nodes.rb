@@ -3,7 +3,7 @@ module Red
     class Array < LiteralNode # :nodoc:
       def initialize(*args)
         options = args.pop
-        elements = args.map {|element| element.zoop }
+        elements = args.map {|element| element.red! }
         self << "[%s]" % elements.join(', ')
       end
     end
@@ -13,7 +13,7 @@ module Red
         options = args.pop
         pairs = ::Hash[*args].map do |k,v|
           #raise(BuildError::NoArbitraryHashKeys, "JavaScript does not support non-string objects as hash keys") unless [:string, :symbol].include?(k.data_type)
-          "%s: %s" % [k.zoop(:quotes => "'"), v.zoop(:as_argument => true)]
+          "%s: %s" % [k.red!(:quotes => "'"), v.red!(:as_argument => true)]
         end
         self << "{ %s }" % [pairs.join(', ')]
       end
@@ -22,7 +22,7 @@ module Red
     class Uninterpreted < LiteralNode # :nodoc:
       def initialize(*args)
         options = args.pop
-        self << args.map {|piece| piece.zoop(:quotes => '')}.join
+        self << args.map {|piece| piece.red!(:quotes => '')}.join
       end
     end
     
@@ -34,23 +34,23 @@ module Red
         #   <multiline block>; }()" wrapper to the entire block.
         options = args.pop
         if options[:as_argument] || options[:force_return] && args.last.is_a?(::Array) && !args.last.flatten.include?(:return)
-          returner = "return %s" % [args.pop.zoop(:as_argument => true)]
+          returner = "return %s" % [args.pop.red!(:as_argument => true)]
         end
         string = options[:as_argument] ? "function() { %s; }()" : "%s"
-        lines = (args.map {|line| line.zoop(options)} + [returner]).compact
+        lines = (args.map {|line| line.red!(options)} + [returner]).compact
         self << string % [lines.join(";\n#{options[:indent] ? '  ' * options[:indent] : "\n"}")]
       end
     end
     
     class Namespace < LiteralNode # :nodoc:
       def initialize(namespace, class_name, options)
-        self << "%s.%s" % [namespace.zoop, class_name.zoop]
+        self << "%s.%s" % [namespace.red!, class_name.red!]
       end
     end
     
     class Other < LiteralNode # :nodoc:
       def initialize(value, options)
-        self << value.zoop(options)
+        self << value.red!(options)
       end
     end
     
@@ -103,8 +103,8 @@ module Red
     class String < LiteralNode # :nodoc:
       def initialize(*args)
         options = args.pop
-        initial = args.shift.zoop(options)
-        subsequent = args.map { |element| " + %s" % [element.zoop] }.join
+        initial = args.shift.red!(options)
+        subsequent = args.map { |element| " + %s" % [element.red!] }.join
         self << [initial, subsequent].join
       end
     end

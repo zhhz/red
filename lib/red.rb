@@ -17,12 +17,6 @@ require 'red/variable_nodes'
 require 'red/wrap_nodes'
 
 module Red
-  @@namespace_stack = []
-  @@exception_index = 0
-  @@red_classes = %w:Array Hash Fixnum Integer Number Numeric Object Range String:
-  @@red_modules = %w:Enumerable Comparable:
-  @@red_initializers = {'' => [:defn, :initialize, [:scope, [:block, [:args], [:nil]]]]}
-  
   ARRAY_NODES = {
     :and          => LogicNode::Conjunction::And,
     :argscat      => IllegalNode::MultipleAssignmentNode,
@@ -122,14 +116,16 @@ module Red
     NilClass      => DataNode::Nil
   }
   
-  def zoop(options = {}, reset = false)
-    if reset
-      @@namespace_stack = []
-      @@exception_index = 0
-      @@red_classes = %w:Array Hash Fixnum Integer Number Numeric Object Range String:
-      @@red_modules = %w:Enumerable Comparable:
-      @@red_initializers = {'' => [:defn, :initialize, [:scope, [:block, [:args], [:nil]]]]}
-    end
+  def self.init
+    @@namespace_stack = []
+    @@exception_index = 0
+    @@red_classes = %w:Array Hash Fixnum Integer Number Numeric Object Range String:
+    @@red_modules = %w:Enumerable Comparable:
+    @@red_initializers = {'' => [:defn, :initialize, [:scope, [:block, [:args], [:nil]]]]}
+  end
+  
+  def red!(options = {}, reset = false)
+    Red.init if reset
     case self
     when Array
       raise(BuildError::UnknownNode, "Don't know how to handle sexp type :#{self.first}") unless ARRAY_NODES[self.first]
@@ -139,28 +135,22 @@ module Red
     end
   end
   
-  def string_to_node # :nodoc:
-    self.translate_to_sexp_array.build_node
-  rescue SyntaxError => e
-    self.handle_red_error(e)
-  end
-  
   def translate_to_sexp_array # :nodoc:
     raise TypeError, "Can only translate Strings" unless self.is_a?(String)
-    ParseTree.translate("::Standard\n" + self)
+    ParseTree.translate(self.escape_dollar_sign_methods)
   end
   
-  def handle_red_error(error) # :nodoc:
-    @@red_errors ||= "\n// Errors"
-    @@red_errors << "\n// %s: %s" % [@@exception_index += 1, error]
-    return DataNode::ErrorNode.new(@@exception_index)
+  def escape_dollar_sign_methods
+    self.gsub(/\$(\$*\w*)\(/,"_r_e_d\\0").gsub('_r_e_d$','_r_e_d').gsub('_r_e_d$','_r_e_dd')
   end
+  
+  # def handle_red_error(error) # :nodoc:
+  #   @@red_errors ||= "\n// Errors"
+  #   @@red_errors << "\n// %s: %s" % [@@exception_index += 1, error]
+  #   return DataNode::ErrorNode.new(@@exception_index)
+  # end
   
   def self.rails
     require 'red/plugin'
-  end
-  
-  def s
-    self.gsub(/\$(\$*\w*)\(/,"_z_d\\0").gsub('_z_d$','_z_d').gsub('_z_d$','_z_dd')
   end
 end

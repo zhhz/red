@@ -3,16 +3,16 @@ module Red
     class Case < LogicNode # :nodoc:
       def initialize(condition, *args)
         options = args.pop
-        else_case = args.pop.zoop
-        cases = args.map {|when_case| when_case.zoop }
+        else_case = args.pop.red!
+        cases = args.map {|when_case| when_case.red! }
         cases << "default: %s" % [else_case] unless else_case.empty?
-        self << "switch (%s) { %s; }" % [condition.zoop(:as_argument => true), cases.compact.join('; ')]
+        self << "switch (%s) { %s; }" % [condition.red!(:as_argument => true), cases.compact.join('; ')]
       end
       
       class When < Case # :nodoc:
         def initialize(conditions, expression, options)
-          condition = conditions[1].zoop(:quotes => "'")
-          expression = expression.zoop
+          condition = conditions[1].red!(:quotes => "'")
+          expression = expression.red!
           expression << '; ' unless expression.empty?
           self << "case %s: %sbreak" % [condition, expression]
         end
@@ -21,7 +21,7 @@ module Red
     
     class Conjunction < LogicNode # :nodoc:
       def initialize(a, b, options)
-        self << self.class::STRING % [a.zoop(:as_argument => true), b.zoop(:as_argument => true)]
+        self << self.class::STRING % [a.red!(:as_argument => true), b.red!(:as_argument => true)]
       end
       
       class And < Conjunction # :nodoc:
@@ -36,14 +36,14 @@ module Red
     class If < LogicNode # :nodoc:
       def initialize(condition, true_case, else_case, options)
         if options[:as_argument]
-          true_case = true_case.nil? ? 'null' : true_case.zoop(:as_argument => true)
-          else_case = else_case.nil? ? 'null' : else_case.zoop(:as_argument => true)
-          self << "(%s ? %s : %s)" % [condition.zoop(:as_argument => true), true_case, else_case]
+          true_case = true_case.nil? ? 'null' : true_case.red!(:as_argument => true)
+          else_case = else_case.nil? ? 'null' : else_case.red!(:as_argument => true)
+          self << "(%s ? %s : %s)" % [condition.red!(:as_argument => true), true_case, else_case]
         else
-          condition = (true_case.nil? ? "!(%s)" : "%s") % [condition.zoop]
-          true_case = "{ %s; }" % [true_case.zoop(:as_argument => true)] unless true_case.nil?
+          condition = (true_case.nil? ? "!(%s)" : "%s") % [condition.red!]
+          true_case = "{ %s; }" % [true_case.red!(:as_argument => true)] unless true_case.nil?
           join      = " else "                                           unless true_case.nil? || else_case.nil?
-          else_case = "{ %s; }" % [else_case.zoop(:as_argument => true)] unless else_case.nil?
+          else_case = "{ %s; }" % [else_case.red!(:as_argument => true)] unless else_case.nil?
           self << "if (%s) %s%s%s" % [condition, true_case, join, else_case]
         end
       end

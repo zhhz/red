@@ -4,13 +4,13 @@ module Red
       def initialize(receiver, block_args, *args)
         options = args.pop
         expression = args[0].is_a?(Array) && args[0][0] == :block ? args[0] : [:block, args[0] || [:nil]]
-        block_arguments = (block_args.is_a?(Array) && block_args.first == :masgn) ? block_args.assoc(:array)[1..-1].map { |dasgn_curr| dasgn_curr.last.zoop(:as_argument => true) } : [(block_args.last rescue nil).zoop(:as_argument => true)]
-        block = "function(%s) { %s; }" % [block_arguments.join(', '), expression.zoop(:force_return => true)]
+        block_arguments = (block_args.is_a?(Array) && block_args.first == :masgn) ? block_args.assoc(:array)[1..-1].map { |dasgn_curr| dasgn_curr.last.red!(:as_argument => true) } : [(block_args.last rescue nil).red!(:as_argument => true)]
+        block = "function(%s) { %s; }" % [block_arguments.join(', '), expression.red!(:force_return => true)]
         if  [:proc, :lambda].include?(receiver.last)
           self << block
         else
-          receiver_arguments = receiver.assoc(:array) ? receiver.assoc(:array)[1..-1].map {|arg| arg.zoop(:as_argument => true)} : []
-          object = receiver.reject{|sexp| sexp.is_a?(Array) && sexp.first == :array}.zoop(:suppress_arguments => true)
+          receiver_arguments = receiver.assoc(:array) ? receiver.assoc(:array)[1..-1].map {|arg| arg.red!(:as_argument => true)} : []
+          object = receiver.reject{|sexp| sexp.is_a?(Array) && sexp.first == :array}.red!(:suppress_arguments => true)
           self << "%s(%s)" % [object, (receiver_arguments + [block]).compact.join(', ')]
         end
       end
@@ -18,7 +18,7 @@ module Red
       class Ampersand < Block # :nodoc:
         def initialize(block_name, function_call, options)
           function_call.assoc(:array) ? function_call.assoc(:array) << block_name : function_call << [:array, block_name]
-          self << function_call.zoop(options)
+          self << function_call.red!(options)
         end
       end
     end
@@ -43,13 +43,13 @@ module Red
     
     class Method < CallNode # :nodoc:
       def sugar(receiver, function, args, options)
-        object = receiver.zoop(:as_argument => true)
-        arguments = "(%s)" % [args.assoc(:array) ? args.assoc(:array)[1..-1].map {|arg| arg.zoop(:as_argument => true)} : []].join(', ') unless options[:suppress_arguments]
-        single_arg = (args.assoc(:array)[1] rescue nil).zoop(:as_argument => true)
+        object = receiver.red!(:as_argument => true)
+        arguments = "(%s)" % [args.assoc(:array) ? args.assoc(:array)[1..-1].map {|arg| arg.red!(:as_argument => true)} : []].join(', ') unless options[:suppress_arguments]
+        single_arg = (args.assoc(:array)[1] rescue nil).red!(:as_argument => true)
         case function
         when :-, :+, :<, :>, :>=, :<=, :%, :*, :/, :^, :==, :===, :in, :instanceof
           string = options[:as_argument] ? "(%s %s %s)" : "%s %s %s"
-          self << string % [object, function.zoop, single_arg]
+          self << string % [object, function.red!, single_arg]
         when :include
           namespace = @@namespace_stack.empty? ? 'Object' : @@namespace_stack.join('.')
           instance_methods = "for (var x in %s) { if (!(x.slice(0,2) == '$$')) { %s.prototype[x] = _mod[x]; }; }" % [single_arg, namespace, single_arg]
@@ -69,7 +69,7 @@ module Red
           self << "new %s%s" % [object, arguments]
         else
           object = receiver.nil? ? "" : "%s." % [object]
-          self << "%s%s%s" % [object, function.zoop, arguments]
+          self << "%s%s%s" % [object, function.red!, arguments]
         end
       end
       

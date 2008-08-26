@@ -6,8 +6,7 @@ module Red # :nodoc:
     self.make_plugin_directory('public/javascripts/red')
     
     return unless display_message
-    puts @files
-    exit
+    puts @files && exit
   end
   
   def add_unobtrusive(library)
@@ -19,8 +18,7 @@ module Red # :nodoc:
   rescue Errno::ENOENT
     puts "There is no Unobtrusive Red support for #{library}"
   ensure
-    puts @files
-    exit
+    puts @files && exit
   end
   
   def make_plugin_directory(dir, only_this_directory = false)
@@ -29,8 +27,7 @@ module Red # :nodoc:
     directory_status = File.exists?(dir) ? 'exists' : Dir.mkdir(dir) && 'create'
     @files << "      %s  %s\n" % [directory_status, dir]
   rescue SystemCallError
-    puts "Unable to create directory in #{parent_dir}"
-    exit
+    puts "Unable to create directory in #{parent_dir}" && exit
   end
   
   def create_plugin_file(operation, filename, contents)
@@ -52,44 +49,36 @@ module Red # :nodoc:
   end
   
   def direct_translate(string)
-    js_output = hush_warnings { string.string_to_node }.compile_node
-    print_js(js_output, 'test')
-    exit
+    print_js(hush_warnings { string.red! }) && exit
   end
   
   def hush_warnings
     $stderr = File.open('spew', 'w')
     output = yield
     $stderr = $>
-    
     File.delete('spew')
-    
     return output
   end
   
-  def print_js(js_output, filename) # :nodoc:
-    puts RED_MESSAGES[:output] % [("- #{filename}.js" unless filename == 'test'), js_output, @@red_errors ||= '']
-  end
-  
-  def compile_red_to_js(filename)
+  def convert_red_file_to_js(filename, dry_run = false)
     unless File.exists?(file = "%s.red" % [filename]) || File.exists?(file = "%sred/%s.red" % [(dir = "public/javascripts/"), filename])
       puts "File #{filename}.red does not exist."
       exit
     end
-    
-    source = File.read(file)
-    js_output = hush_warnings { source.string_to_node }.compile_node
-    
-    File.open("%s%s.js" % [dir, filename], 'w') {|f| f.write(js_output)} unless filename == 'test'
-    
-    print_js(js_output, filename)
+    js_output = hush_warnings { File.read(file).translate_to_sexp_array }.red!
+    File.open("%s%s.js" % [dir, filename], 'w') {|f| f.write(js_output)} unless dry_run
+    print_js(js_output, filename, dry_run)
+  end
+  
+  def print_js(js_output, filename = nil, dry_run = true) # :nodoc:
+    puts RED_MESSAGES[:output] % [("- #{filename}.js" unless dry_run), js_output, @@red_errors ||= '']
   end
   
   RED_MESSAGES = {}
   RED_MESSAGES[:banner] = <<-MESSAGE
 
 Description:
-  Red is a Ruby-to-JavaScript transliterator.
+  Red converts Ruby to JavaScript.
   For more information see http://github.com/jessesielaff/red/wikis
 
 Usage: red [filename] [options]

@@ -62,7 +62,7 @@ module Red
       
       def camelize(string, disabled = false)
         return string unless self.camelize?(string) && !disabled
-        words = string.gsub(/@/,'').gsub('?','_bool').gsub('!','_bang').gsub('_z_dd','$$').gsub('_z_d','$').split(/_| /)
+        words = string.gsub(/@/,'').gsub('?','_bool').gsub('!','_bang').gsub('_r_e_dd','$$').gsub('_r_e_d','$').split(/_| /)
         underscore = words.shift if words.first.empty?
         return (underscore ? '_' : '') + words[0] + words[1..-1].map {|word| word == word.upcase ? word : word.capitalize }.join
       end
