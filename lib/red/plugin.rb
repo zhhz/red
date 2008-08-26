@@ -8,7 +8,7 @@ module Red
       @@red_updated = true
       Red.init
       red_dir = 'public/javascripts/red/'
-      Dir.glob("#{red_dir}**/*[.rb|.red]").each do |filepath|
+      Dir.glob("#{red_dir}**/*[.rbd]").each do |filepath|
         if self.update?(filename = filepath.gsub(red_dir,'').gsub(/.[rb|red]+$/,'')) || true
           js_output = (File.read(filepath).translate_to_sexp_array.red! || '')
           
