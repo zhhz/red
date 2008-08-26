@@ -13,8 +13,6 @@ lib/javascripts/red/unobtrusive.red
 lib/red.rb
 lib/red/assignment_nodes.rb
 lib/red/call_nodes.rb
-lib/red/conditional_nodes.rb
-lib/red/conjunction_nodes.rb
 lib/red/constant_nodes.rb
 lib/red/control_nodes.rb
 lib/red/data_nodes.rb
@@ -23,6 +21,7 @@ lib/red/errors.rb
 lib/red/executable.rb
 lib/red/illegal_nodes.rb
 lib/red/literal_nodes.rb
+lib/red/logic_nodes.rb
 lib/red/plugin.rb
 lib/red/variable_nodes.rb
 lib/red/version.rb
