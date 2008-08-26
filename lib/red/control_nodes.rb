@@ -45,7 +45,7 @@ module Red
     
     class Loop < ControlNode # :nodoc:
       def initialize(condition, body, run_only_if_condition_met, options)
-        condition = (self.is_a?(UntilNode) ? "!(%s)" : "%s") % [condition.red!(:as_argument => true)]
+        condition = (self.is_a?(Until) ? "!(%s)" : "%s") % [condition.red!(:as_argument => true)]
         if run_only_if_condition_met
           self << "while (%s) { %s; }" % [condition, body.red!]
         else
