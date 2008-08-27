@@ -41,9 +41,9 @@ module Red
           self << "(%s ? %s : %s)" % [condition.red!(:as_argument => true), true_case, else_case]
         else
           condition = (true_case.nil? ? "!(%s)" : "%s") % [condition.red!]
-          true_case = "{ %s; }" % [true_case.red!(:as_argument => true)] unless true_case.nil?
-          join      = " else "                                           unless true_case.nil? || else_case.nil?
-          else_case = "{ %s; }" % [else_case.red!(:as_argument => true)] unless else_case.nil?
+          true_case = "{ %s; }" % [true_case.red!] unless true_case.nil?
+          join      = " else "                     unless true_case.nil? || else_case.nil?
+          else_case = "{ %s; }" % [else_case.red!] unless else_case.nil?
           self << "if (%s) %s%s%s" % [condition, true_case, join, else_case]
         end
       end
