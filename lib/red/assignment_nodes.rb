@@ -29,7 +29,7 @@ module Red
           self << "%s = %s || %s" % [variable_name.red!, variable_name.red!, expression.red!(:as_argument => true)]
         else
           string = (options[:as_argument] || variable_name.is_a?(Array) && variable_name.first == :colon2) ? "%s = %s" : "var %s = %s"
-          self << string % [variable_name.red!, expression.red!(:as_argument => true)]
+          self << string.add_parentheses_wrapper(:perform_if => options[:as_argument]) % [variable_name.red!, expression.red!(:as_argument => true)]
         end
       end
     end
@@ -39,8 +39,8 @@ module Red
         expression = arguments.pop.red!(:as_argument => true)
         accessor = (writer == :[]= ? arguments[1] : writer.to_s.gsub(/=/,'').to_sym)
         if accessor.is_a?(Symbol) || accessor.first == :lit && [Symbol, String].include?(accessor.last.class)
-          string = [:const, :colon2].include?(variable_name.first) ? "%s.$$%s" : "%s.$%s"
-          receiver = string % [variable_name.red!, accessor.red!(:quotes => '')]
+          #string = [:const, :colon2].include?(variable_name.first) ? "%s.$$%s" : "%s.$%s"
+          receiver = "%s.%s" % [variable_name.red!, accessor.red!(:quotes => '')]
         else
           receiver = "%s[%s]" % [variable_name.red!, accessor.red!(:as_argument => true)]
         end

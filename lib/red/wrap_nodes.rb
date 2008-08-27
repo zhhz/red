@@ -21,9 +21,5 @@ module Red
     
     class Super < WrapNode # :nodoc:
     end
-    
-    class Yield < WrapNode # :nodoc:
-      STRING = "yield %s"
-    end
   end
 end

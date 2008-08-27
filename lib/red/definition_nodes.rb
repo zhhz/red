@@ -23,8 +23,8 @@ module Red
         modules    = block.select(&nodes(:module))
         classes    = block.select(&nodes(:class))
         class_eval = block.reject(&nodes(:cvdecl, :defn, :module, :class))
-        included   = class_eval.select {|node| node.is_a?(Array) && node[0..1] = [:fcall, :include]}
-        class_eval = class_eval.reject {|node| node.is_a?(Array) && node[0..1] = [:fcall, :include]}
+        included   = class_eval.select {|node| node.is_a?(Array) && node[0..1] == [:fcall, :include]}
+        class_eval = class_eval.reject {|node| node.is_a?(Array) && node[0..1] == [:fcall, :include]}
         
         # Combine and compile.
         arguments  = arguments.map {|argument| argument.red!(:as_argument => true)}
@@ -110,8 +110,8 @@ module Red
     end
     
     class Method < DefinitionNode # :nodoc:
-      def args_and_contents_from(block, function, indent)
-        block_arg = block.delete(block.assoc(:block_arg))
+      def args_and_contents_from(block, function, indent = 0)
+        block_arg = block.delete(block.assoc(:block_arg)) || ([:block_arg, :block] if block.flatten.include?(:yield))
         arguments = block.delete(block.assoc(:args))[1..-1] || []
         defaults = arguments.delete(arguments.assoc(:block))
         arguments = (block_arg ? arguments << block_arg.last : arguments).map {|arg| arg.red!(:as_argument => true)}
@@ -139,7 +139,7 @@ module Red
           receiver = "%s.%s" % [(object == [:self] ? @@namespace_stack.join('.') : object.red!), function]
           block = scope.assoc(:args) ? (scope << [:block, scope.delete(scope.assoc(:args)), [:nil]]).assoc(:block) : scope.assoc(:block)
           block << [:nil] if block.assoc(:block_arg) == block.last
-          arguments, contents = self.args_and_contents_from(block)
+          arguments, contents = self.args_and_contents_from(block, function)
           self << "%s = function %s(%s) { %s; }" % [receiver, function, arguments.join(', '), contents]
         end
       end

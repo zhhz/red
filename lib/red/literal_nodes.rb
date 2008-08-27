@@ -3,7 +3,7 @@ module Red
     class Array < LiteralNode # :nodoc:
       def initialize(*args)
         options = args.pop
-        elements = args.map {|element| element.red! }
+        elements = args.map {|element| element.red!(:quotes => "'") }
         self << "[%s]" % elements.join(', ')
       end
     end

@@ -44,7 +44,7 @@ module Red
     class Method < CallNode # :nodoc:
       def sugar(receiver, function, args, options)
         object = receiver.red!(:as_argument => true)
-        arguments = "(%s)" % [args.assoc(:array) ? args.assoc(:array)[1..-1].map {|arg| arg.red!(:as_argument => true)} : []].join(', ') unless options[:suppress_arguments]
+        arguments = "(%s)" % [args.assoc(:array) ? args.assoc(:array)[1..-1].map {|arg| arg.red!(:as_argument => true, :quotes => "'")} : []].join(', ') unless options[:suppress_arguments]
         single_arg = (args.assoc(:array)[1] rescue nil).red!(:as_argument => true)
         case function
         when :-, :+, :<, :>, :>=, :<=, :%, :*, :/, :^, :==, :===, :in, :instanceof
@@ -59,7 +59,7 @@ module Red
           object = "this" if receiver.nil?
           args = args.assoc(:array) ? args.assoc(:array)[1..-1] : []
           if args.assoc(:str) || args.assoc(:lit) && args.assoc(:lit)[1].is_a?(Symbol)
-            self << "%s.$%s" % [object, args[0][1]]
+            self << "%s.%s" % [object, args[0][1]]
           else
             self << "%s[%s]" % [object, single_arg]
           end
@@ -85,6 +85,14 @@ module Red
           options = args.pop
           self.sugar(nil, function, args, options)
         end
+      end
+    end
+    
+    class Yield < CallNode # :nodoc:
+      def initialize(args = nil, options = {})
+        (options = args) && (args = nil) if args.is_a?(Hash)
+        arguments = args ? ( args.first == :array ? args[1..-1].map {|arg| arg.red!(:as_argument => true) } : [args.red!(:as_argument => true)] ) : []
+        self << "block(%s)" % [arguments.join(', ')]
       end
     end
   end

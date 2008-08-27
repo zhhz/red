@@ -100,7 +100,7 @@ module Red
     :when         => LogicNode::Case::When,
     :while        => ControlNode::Loop::While,
     :xstr         => LiteralNode::Uninterpreted,
-    :yield        => WrapNode::Yield,
+    :yield        => CallNode::Yield,
     :zarray       => LiteralNode::Array,
     :zsuper       => WrapNode::Super
   }
@@ -119,8 +119,8 @@ module Red
   def self.init
     @@namespace_stack = []
     @@exception_index = 0
-    @@red_classes = %w:Array Hash Fixnum Integer Number Numeric Object Range String:
-    @@red_modules = %w:Enumerable Comparable:
+    @@red_classes = %w:Array Function Number Object String:
+    @@red_modules = %w::
     @@red_initializers = {'' => [:defn, :initialize, [:scope, [:block, [:args], [:nil]]]]}
   end
   
@@ -142,6 +142,11 @@ module Red
   
   def escape_dollar_sign_methods
     self.gsub(/\$(\$*\w*)\(/,"_r_e_d\\0").gsub('_r_e_d$','_r_e_d').gsub('_r_e_d$','_r_e_dd')
+  end
+  
+  def add_parentheses_wrapper(options)
+    self.replace("(%s)" % self) if options[:perform_if]
+    return self
   end
   
   # def handle_red_error(error) # :nodoc:
