@@ -6,9 +6,7 @@ module Red
     end
     
     class Defined < WrapNode # :nodoc:
-      #def compile_node(options = {})
-      #  return "!(typeof %s == undefined)" % self.compile_internals
-      #end
+      STRING = "!(typeof(%s) == 'undefined')"
     end
     
     class Not < WrapNode # :nodoc:
@@ -20,6 +18,7 @@ module Red
     end
     
     class Super < WrapNode # :nodoc:
+      STRING = ""
     end
   end
 end
