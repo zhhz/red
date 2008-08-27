@@ -104,7 +104,7 @@ module Red
       def initialize(*args)
         options = args.pop
         initial = args.shift.red!(options)
-        subsequent = args.map { |element| " + %s" % [element.red!] }.join
+        subsequent = args.map { |element| " + %s" % [element.red!(:as_argument => true)] }.join
         self << [initial, subsequent].join
       end
     end
