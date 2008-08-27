@@ -9,15 +9,16 @@ module Red
         if  [:proc, :lambda].include?(receiver.last)
           self << block
         else
-          receiver_arguments = receiver.assoc(:array) ? receiver.assoc(:array)[1..-1].map {|arg| arg.red!(:as_argument => true)} : []
-          object = receiver.reject{|sexp| sexp.is_a?(Array) && sexp.first == :array}.red!(:suppress_arguments => true)
+          receiver_arguments_sexp = receiver.last.is_a?(Array) && receiver.last.first == :array ? receiver.last[1..-1] : []
+          receiver_arguments = receiver_arguments_sexp.map {|arg| arg.red!(:as_argument => true, :quotes => "'")}
+          object = receiver.reject{|sexp| sexp == receiver_arguments_sexp}.red!(:suppress_arguments => true)
           self << "%s(%s)" % [object, (receiver_arguments + [block]).compact.join(', ')]
         end
       end
       
       class Ampersand < Block # :nodoc:
         def initialize(block_name, function_call, options)
-          function_call.assoc(:array) ? function_call.assoc(:array) << block_name : function_call << [:array, block_name]
+          function_call.last.is_a?(Array) && function_call.last.first == :array ? function_call.last << block_name : function_call << [:array, block_name]
           self << function_call.red!(options)
         end
       end
@@ -44,8 +45,8 @@ module Red
     class Method < CallNode # :nodoc:
       def sugar(receiver, function, args, options)
         object = receiver.red!(:as_argument => true)
-        arguments = "(%s)" % [args.assoc(:array) ? args.assoc(:array)[1..-1].map {|arg| arg.red!(:as_argument => true, :quotes => "'")} : []].join(', ') unless options[:suppress_arguments]
-        single_arg = (args.assoc(:array)[1] rescue nil).red!(:as_argument => true)
+        arguments = "(%s)" % [args.last.is_a?(Array) && args.last.first == :array ? args.last[1..-1].map {|arg| arg.red!(:as_argument => true, :quotes => "'")} : []].join(', ') unless options[:suppress_arguments]
+        single_arg = (args.last[1] rescue nil).red!(:as_argument => true)
         case function
         when :-, :+, :<, :>, :>=, :<=, :%, :*, :/, :^, :==, :===, :in, :instanceof
           string = options[:as_argument] ? "(%s %s %s)" : "%s %s %s"
@@ -57,7 +58,7 @@ module Red
           self << [instance_methods, class_variables].join(";\n\n")
         when :[]
           object = "this" if receiver.nil?
-          args = args.assoc(:array) ? args.assoc(:array)[1..-1] : []
+          args = (args.last.is_a?(Array) && args.last.first == :array) ? args.last[1..-1] : []
           if args.assoc(:str) || args.assoc(:lit) && args.assoc(:lit)[1].is_a?(Symbol)
             self << "%s.%s" % [object, args[0][1]]
           else
@@ -75,6 +76,7 @@ module Red
       
       class ExplicitReceiver < Method # :nodoc:
         def initialize(receiver, function, *args)
+          (args << function) && function = receiver && receiver = nil if args.empty?
           options = args.pop
           self.sugar(receiver, function, args, options)
         end

@@ -115,7 +115,7 @@ module Red
         arguments = block.delete(block.assoc(:args))[1..-1] || []
         defaults = arguments.delete(arguments.assoc(:block))
         arguments = (block_arg ? arguments << block_arg.last : arguments).map {|arg| arg.red!(:as_argument => true)}
-        contents = [defaults.red!(:as_default => true), block.red!(:force_return => function != 'initialize', :indent => indent)].reject {|x| x.empty? }.join('; ')
+        contents = [("blockGivenBool = function() { return !!block; }" if block_arg), defaults.red!(:as_default => true), block.red!(:force_return => function != 'initialize', :indent => indent)].compact.reject {|x| x.empty? }
         return [arguments, contents]
       end
       
@@ -126,9 +126,9 @@ module Red
           indent = options[:as_property] ? 2 : 0
           arguments, contents = self.args_and_contents_from(block, function, indent)
           if options[:as_property]
-            self << "%s: function %s(%s) {\n    %s;\n  }" % [function, function, arguments.join(', '), contents]
+            self << "%s: function %s(%s) {\n    %s;\n  }" % [function, function, arguments.join(', '), contents.join(";\n    ")]
           else
-            self << "function %s(%s) { %s; }" % [function, arguments.join(', '), contents]
+            self << "function %s(%s) { %s; }" % [function, arguments.join(', '), contents.join(";\n")]
           end
         end
       end
