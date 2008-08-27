@@ -2,19 +2,19 @@ $:.unshift(File.dirname(__FILE__)) unless
   $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
 
 require 'parse_tree'
-require 'red/assignment_nodes'
-require 'red/call_nodes'
-require 'red/constant_nodes'
-require 'red/control_nodes'
-require 'red/data_nodes'
-require 'red/definition_nodes'
 require 'red/errors'
-require 'red/illegal_nodes'
-require 'red/literal_nodes'
-require 'red/logic_nodes'
 require 'red/plugin'
-require 'red/variable_nodes'
-require 'red/wrap_nodes'
+require 'red/nodes/assignment_nodes'
+require 'red/nodes/call_nodes'
+require 'red/nodes/constant_nodes'
+require 'red/nodes/control_nodes'
+require 'red/nodes/data_nodes'
+require 'red/nodes/definition_nodes'
+require 'red/nodes/illegal_nodes'
+require 'red/nodes/literal_nodes'
+require 'red/nodes/logic_nodes'
+require 'red/nodes/variable_nodes'
+require 'red/nodes/wrap_nodes'
 
 module Red
   ARRAY_NODES = {
