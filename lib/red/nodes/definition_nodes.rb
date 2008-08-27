@@ -115,7 +115,7 @@ module Red
         arguments = block.delete(block.assoc(:args))[1..-1] || []
         defaults = arguments.delete(arguments.assoc(:block))
         arguments = (block_arg ? arguments << block_arg.last : arguments).map {|arg| arg.red!(:as_argument => true)}
-        contents = [("blockGivenBool = function() { return !!block; }" if block_arg), defaults.red!(:as_default => true), block.red!(:force_return => function != 'initialize', :indent => indent)].compact.reject {|x| x.empty? }
+        contents = [("var blockGivenBool = function() { return !!block; }" if block_arg), defaults.red!(:as_default => true), block.red!(:force_return => function != 'initialize', :indent => indent)].compact.reject {|x| x.empty? }
         return [arguments, contents]
       end
       
