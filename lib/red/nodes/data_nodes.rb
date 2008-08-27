@@ -1,6 +1,8 @@
 module Red
   class DataNode < String # :nodoc:
     def wrap_string(string, left_wrapper = "", right_wrapper = nil)
+      string.gsub!(/'/, "\\\\'") if left_wrapper == "'"
+      string.gsub!(/"/, '\\\\"') if left_wrapper == '"'
       return "%s%s%s" % [left_wrapper, string, right_wrapper || left_wrapper]
     end
     
