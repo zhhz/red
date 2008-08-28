@@ -25,11 +25,11 @@ module Red
       end
       
       class And < Conjunction # :nodoc:
-        STRING = "(%s && %s)"
+        STRING = "(_a=$T(%s))?((_c=$T(_b=%s))?_b:_c):_a"
       end
       
       class Or < Conjunction # :nodoc:
-        STRING = "(%s || %s)"
+        STRING = "$T(_a=%s)?_a:%s"
       end
     end
     
@@ -38,9 +38,9 @@ module Red
         if options[:as_argument]
           true_case = true_case.nil? ? 'null' : true_case.red!(:as_argument => true)
           else_case = else_case.nil? ? 'null' : else_case.red!(:as_argument => true)
-          self << "(%s ? %s : %s)" % [condition.red!(:as_argument => true), true_case, else_case]
+          self << "($T(%s) ? %s : %s)" % [condition.red!(:as_argument => true), true_case, else_case]
         else
-          condition = (true_case.nil? ? "!(%s)" : "%s") % [condition.red!(:as_argument => true)]
+          condition = (true_case.nil? ? "!$T(%s)" : "$T(%s)") % [condition.red!(:as_argument => true)]
           true_case = "{ %s; }" % [true_case.red!] unless true_case.nil?
           join      = " else "                     unless true_case.nil? || else_case.nil?
           else_case = "{ %s; }" % [else_case.red!] unless else_case.nil?

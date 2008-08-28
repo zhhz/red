@@ -10,7 +10,7 @@ module Red
     end
     
     class Not < WrapNode # :nodoc:
-      STRING = "!(%s)"
+      STRING = "!$T(%s)"
     end
     
     class Return < WrapNode # :nodoc:
