@@ -19,7 +19,7 @@ module Red
     end
     
     class Nil < ConstantNode # :nodoc:
-      STRING = "null"
+      STRING = "$nil"
     end
     
     class Self < ConstantNode # :nodoc:

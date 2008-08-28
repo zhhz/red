@@ -48,7 +48,7 @@ module Red
         arguments = "(%s)" % [args.last.is_a?(Array) && args.last.first == :array ? args.last[1..-1].map {|arg| arg.red!(:as_argument => true, :quotes => "'")} : []].join(', ') unless options[:suppress_arguments]
         single_arg = (args.last[1] rescue nil).red!(:as_argument => true)
         case function
-        when :-, :+, :<, :>, :>=, :<=, :%, :*, :/, :^, :==, :===, :in, :instanceof
+        when :-, :+, :<, :>, :>=, :<=, :%, :*, :/, :^, :===, :in, :instanceof
           string = options[:as_argument] ? "(%s %s %s)" : "%s %s %s"
           self << string % [object, function.red!, single_arg]
         when :include
@@ -68,6 +68,8 @@ module Red
           self << "throw(%s)" % [single_arg]
         when :new
           self << "new %s%s" % [object, arguments]
+        when :==
+          self << "%s.eqlBool(%s)" % [object, single_arg]
         else
           object = receiver.nil? ? "" : "%s." % [object]
           self << "%s%s%s" % [object, function.red!, arguments]

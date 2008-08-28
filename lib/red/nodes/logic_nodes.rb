@@ -36,8 +36,8 @@ module Red
     class If < LogicNode # :nodoc:
       def initialize(condition, true_case, else_case, options)
         if options[:as_argument]
-          true_case = true_case.nil? ? 'null' : true_case.red!(:as_argument => true)
-          else_case = else_case.nil? ? 'null' : else_case.red!(:as_argument => true)
+          true_case = true_case.nil? ? "$nil" : true_case.red!(:as_argument => true)
+          else_case = else_case.nil? ? "$nil" : else_case.red!(:as_argument => true)
           self << "($T(%s) ? %s : %s)" % [condition.red!(:as_argument => true), true_case, else_case]
         else
           condition = (true_case.nil? ? "!$T(%s)" : "$T(%s)") % [condition.red!(:as_argument => true)]

@@ -137,11 +137,7 @@ module Red
   
   def translate_to_sexp_array # :nodoc:
     raise TypeError, "Can only translate Strings" unless self.is_a?(String)
-    ParseTree.translate(self.escape_dollar_sign_methods.add_truth_and_equality)
-  end
-  
-  def add_truth_and_equality
-    self.replace("`function $T(x){return(x!==false&&x!==null&&x!==undefined?true:x);}`;%s" % [self])
+    ParseTree.translate(self.escape_dollar_sign_methods)
   end
   
   def escape_dollar_sign_methods
