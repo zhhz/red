@@ -49,7 +49,8 @@ module Red # :nodoc:
   end
   
   def direct_translate(string)
-    print_js(hush_warnings { string.red! }) && exit
+    print_js(hush_warnings { string.translate_to_sexp_array }.red!)
+    exit
   end
   
   def hush_warnings
