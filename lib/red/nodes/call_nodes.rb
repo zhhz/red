@@ -5,7 +5,7 @@ module Red
         options = args.pop
         expression = args[0].is_a?(Array) && args[0][0] == :block ? args[0] : [:block, args[0] || [:nil]]
         block_arguments = (block_args.is_a?(Array) && block_args.first == :masgn) ? block_args.assoc(:array)[1..-1].map { |dasgn_curr| dasgn_curr.last.red!(:as_argument => true) } : [(block_args.last rescue nil).red!(:as_argument => true)]
-        block = "function(%s) { %s; }" % [block_arguments.join(', '), expression.red!(:force_return => true)]
+        block = "function(%s) { %s; }._as(this)" % [block_arguments.join(', '), expression.red!(:force_return => true)]
         if  [:proc, :lambda].include?(receiver.last)
           self << block
         else
@@ -87,7 +87,7 @@ module Red
       class ImplicitReceiver < Method # :nodoc:
         def initialize(function, *args)
           options = args.pop
-          self.sugar(nil, function, args, options)
+          self.sugar([:self], function, args, options)
         end
       end
     end
