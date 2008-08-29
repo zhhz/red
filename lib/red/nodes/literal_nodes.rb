@@ -33,7 +33,7 @@ module Red
         # as_argument: duplicates :force_return and adds "function() {
         #   <multiline block>; }()" wrapper to the entire block.
         options = args.pop
-        if options[:as_argument] || options[:force_return] && args.last.is_a?(::Array) && !args.last.flatten.include?(:return)
+        if options[:as_argument] || options[:force_return] && args.last.is_a?(::Array) && (args.last.first == :iter ? !args.last.flatten.include?(:return) : true)
           returner = "return %s" % [args.pop.red!(:as_argument => true)]
         end
         string = options[:as_argument] ? "function() { %s; }()" : "%s"
