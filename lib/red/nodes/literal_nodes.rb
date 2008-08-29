@@ -15,7 +15,7 @@ module Red
           #raise(BuildError::NoArbitraryHashKeys, "JavaScript does not support non-string objects as hash keys") unless [:string, :symbol].include?(k.data_type)
           "%s: %s" % [k.red!(:quotes => "'"), v.red!(:as_argument => true)]
         end
-        self << "{ %s }" % [pairs.join(', ')]
+        self << "new Hash({ %s })" % [pairs.join(', ')]
       end
     end
     
