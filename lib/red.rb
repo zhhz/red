@@ -90,11 +90,11 @@ module Red
     :scope        => LiteralNode::Other,
     :self         => ConstantNode::Self,
     :splat        => LiteralNode::Splat,
-    :super        => WrapNode::Super,
+    :super        => CallNode::Super,
     :svalue       => LiteralNode::Other,
     :str          => LiteralNode::String,
     :true         => ConstantNode::True,
-    :undef        => IllegalNode::UndefNode,
+    :undef        => DefinitionNode::Undef,
     :until        => ControlNode::Loop::Until,
     :vcall        => VariableNode::OtherVariable,
     :when         => LogicNode::Case::When,
@@ -102,7 +102,7 @@ module Red
     :xstr         => LiteralNode::Uninterpreted,
     :yield        => CallNode::Yield,
     :zarray       => LiteralNode::Array,
-    :zsuper       => WrapNode::Super
+    :zsuper       => CallNode::Super
   }
   
   DATA_NODES = {
@@ -119,9 +119,10 @@ module Red
   def self.init
     @@namespace_stack = []
     @@exception_index = 0
-    @@red_constants = %w::
-    @@red_classes   = %w::
+    @@red_constants = %w:Function:
+    @@red_classes   = %w:Function:
     @@red_modules   = %w::
+    @@red_function  = nil
     @@red_initializers = {'' => [:defn, :initialize, [:scope, [:block, [:args], [:nil]]]]}
   end
   

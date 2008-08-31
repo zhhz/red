@@ -13,17 +13,8 @@ module Red
     class NoBEGINorEND < BuildError # :nodoc:
     end
     
-    # Raised when a block is declared as a method argument.
-    class NoBlockArguments < BuildError # :nodoc:
-    end
-    
     # Raised when a +break+ keyword is followed by an argument.
     class NoBreakArguments < BuildError # :nodoc:
-    end
-    
-    # Raised when the active JavaScript library does not support class
-    # inheritance.
-    class NoClassInheritance < BuildError # :nodoc:
     end
     
     # Raised when a +redo+ or +retry+ keyword is used.
@@ -61,17 +52,8 @@ module Red
     class NoSplatConstructor < BuildError # :nodoc:
     end
     
-    # Raised when the active JavaScript library does not support calls to
-    # +super+.
-    class NoSuperMethods < BuildError # :nodoc:
-    end
-    
     # Raised when a +Symbol+ literal declaration contains evaluated content.
     class NoSymbolEvaluation < BuildError # :nodoc:
-    end
-    
-    # Raised when an +undef+ keyword is used.
-    class NoUndef < BuildError # :nodoc:
     end
     
     # Raised when an unknown ParseTree sexp type is called to initialize.

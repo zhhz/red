@@ -25,6 +25,7 @@ module Red
       end
       
       class And < Conjunction # :nodoc:
+        # nil && obj produces false instead of $nil
         STRING = "(_a=$T(%s))?((_c=$T(_b=%s))?_b:_c):_a"
       end
       
@@ -35,6 +36,7 @@ module Red
     
     class If < LogicNode # :nodoc:
       def initialize(condition, true_case, else_case, options)
+        # ... each_with_index {|x,i| b << a.flatten[i+1] if x == :lasgn}
         if options[:as_argument]
           true_case = true_case.nil? ? "$nil" : true_case.red!(:as_argument => true)
           else_case = else_case.nil? ? "$nil" : else_case.red!(:as_argument => true)

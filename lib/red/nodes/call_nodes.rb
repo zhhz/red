@@ -59,17 +59,20 @@ module Red
         when :[]
           object = "this" if receiver.nil?
           args = (args.last.is_a?(Array) && args.last.first == :array) ? args.last[1..-1] : []
-          if args.assoc(:str) || args.assoc(:lit) && args.assoc(:lit)[1].is_a?(Symbol)
-            self << "%s.%s" % [object, args[0][1]]
-          else
-            self << "%s[%s]" % [object, single_arg]
-          end
+          self << "%s._g%s" % [object, arguments]
+          #if args.assoc(:str) || args.assoc(:lit) && args.assoc(:lit)[1].is_a?(Symbol)
+          #  self << "%s.%s" % [object, args[0][1]]
+          #else
+          #  self << "%s[%s]" % [object, single_arg]
+          #end
         when :raise
           self << "throw(%s)" % [single_arg]
         when :new
           self << "new %s%s" % [object, arguments]
         when :==
           self << "%s.eqlBool(%s)" % [object, single_arg]
+        when :<<
+          self << "%s._ltlt(%s)" % [object, single_arg]
         else
           object = receiver.nil? ? "" : "%s." % [object]
           self << "%s%s%s" % [object, function.red!, arguments]
@@ -89,6 +92,14 @@ module Red
           options = args.pop
           self.sugar([:self], function, args, options)
         end
+      end
+    end
+    
+    class Super < CallNode # :nodoc:
+      def initialize(*args)
+        options = args.pop
+        arguments = (args.first[1..-1] rescue []).unshift([:self]).map {|arg| arg.red!(:as_argument => true) }
+        self << "this.class().superclass().prototype.%s.apply(%s)" % [@@red_function, arguments.join(', ')]
       end
     end
     

@@ -16,9 +16,5 @@ module Red
     class Return < WrapNode # :nodoc:
       STRING = "return %s"
     end
-    
-    class Super < WrapNode # :nodoc:
-      STRING = ""
-    end
   end
 end

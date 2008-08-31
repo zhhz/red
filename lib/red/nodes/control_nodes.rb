@@ -29,7 +29,8 @@ module Red
           rescued = rescue_body[2].is_a?(Array) && rescue_body[2].first == :block ? rescue_body[2] : [:block, rescue_body[2]]
         end
         attempted = attempted.is_a?(Array) && attempted.first == :block ? attempted : [:block, attempted]
-        self << string % [attempted.red!(:force_return => options[:as_argument] || options[:force_return]), exception_variable, rescued.red!(:force_return => options[:as_argument] || options[:force_return])]
+        self << string % [attempted.red!, exception_variable, rescued.red!]
+        #self << string % [attempted.red!(:force_return => options[:as_argument] || options[:force_return]), exception_variable, rescued.red!(:force_return => options[:as_argument] || options[:force_return])]
       end
     end
     
@@ -58,17 +59,6 @@ module Red
       
       class While < Loop # :nodoc:
       end
-    end
-    
-    class Library # :nodoc:
-      #def initialize(library)
-      #  @@red_library = @library = library
-      #end
-      #
-      #def compile_node(options = {})
-      #  @@red_library = @library
-      #  nil
-      #end
     end
   end
 end

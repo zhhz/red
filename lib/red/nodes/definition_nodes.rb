@@ -14,6 +14,9 @@ module Red
         @@namespace_stack.push(class_name.red!)
         namespaced_class = @@namespace_stack.join('.')
         
+        superclass = superclass.red!
+        puts superclass.inspect
+        
         # Split out the various pieces needed to emulate class behavior.
         block = scope.assoc(:block) || scope
         attrs      = block.rassoc(:attr) ? block.delete(block.rassoc(:attr)).assoc(:array)[1..-1].map {|node| self.attr_sexp(node.last.to_sym).red!(:as_property => true) } : []
@@ -32,12 +35,13 @@ module Red
         properties = properties.map {|property| property.red!(:as_property => true)}
         children = (modules + classes).map {|node| node.red! }
         constructor = "%s%s = function %s(%s) { this.initialize.apply(this, arguments) }" % [("var " unless namespaced_class.include?('.')), namespaced_class, class_name, arguments.join(', ')] unless @@red_classes.include?(namespaced_class)
+        inheritance = "for (var x in %s.prototype) { %s.prototype[x] = %s.prototype[x] };\n%s.superclass = function superclass() { return %s; }" % [superclass, namespaced_class, superclass, namespaced_class, superclass] unless superclass.empty?
         included = included.map {|node| node.red! }
         instance_methods = "for (var x in _mod = {\n  %s\n}) { %s.prototype[x] = _mod[x] }" % [functions.join(",\n  \n  "), namespaced_class] unless functions.empty?
         class_variables = "for (var x in _mod = {\n  %s\n}) { %s[x] = _mod[x] }" % [properties.join(",\n  \n  "), namespaced_class] unless properties.empty?
         
         # Return the compiled JavaScript string.
-        self << [constructor, included.join(";\n\n"), instance_methods, class_variables, children.join(";\n\n"), (class_eval.red! rescue '')].compact.reject {|x| x.empty?}.join(";\n\n")
+        self << [constructor, inheritance, included.join(";\n\n"), instance_methods, class_variables, children.join(";\n\n"), (class_eval.red! rescue '')].compact.reject {|x| x.empty?}.join(";\n\n")
         
         # Go back up one level in the namespace hierarchy, and add this
         # to the list of classes that Red knows about.
@@ -127,6 +131,7 @@ module Red
             when :<< : :_ltlt
             else function_name
           end.red!
+          @@red_function = function if options[:as_property]
           block = scope.assoc(:block)
           indent = options[:as_property] ? 2 : 0
           arguments, contents = self.args_and_contents_from(block, function, indent)
@@ -135,6 +140,7 @@ module Red
           else
             self << "function %s(%s) { %s; }" % [function, arguments.join(', '), contents.join(";\n")]
           end
+          @@red_function = nil if options[:as_property]
         end
       end
       
@@ -168,6 +174,13 @@ module Red
       #  @@red_class = old_class
       #  return "{ %s }" % [slots]
       #end
+    end
+    
+    class Undef < DefinitionNode # :nodoc:
+      def initialize(variable_name, options)
+        namespaced_function = @@namespace_stack.empty? ? variable_name.red! : (@@namespace_stack + ['prototype', variable_name.red!]).join('.')
+        self << "delete %s" % [namespaced_function]
+      end
     end
   end
 end
