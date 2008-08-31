@@ -11,6 +11,13 @@ module Red
       end
     end
     
+    class Constant < AssignmentNode # :nodoc:
+      def initialize(constant_name, expression, options)
+        @@red_constants |= [(constant = (@@namespace_stack + [constant_name.red!]).join('.'))]
+        self << "%s = %s" % [constant, expression.red!(:as_argument => true)]
+      end
+    end
+    
     class GlobalVariable < AssignmentNode  # :nodoc:
       def initialize(variable_name, expression, options)
         self << "%s = %s" % [variable_name.red!, expression.red!(:as_argument => true)]
@@ -72,18 +79,18 @@ module Red
       class Or < Operator # :nodoc:
         def initialize(object, assignment, options)
           expression = assignment.last.red!(:as_argument => true)
-          receiver = object.red!
-          string = (object.is_a?(Array) && [:const, :lvar].include?(object.first)) ? "var %s = %s || %s" : "%s = %s || %s"
-          self << string % [receiver, receiver, expression]
+          conjunction = Red::LogicNode::Conjunction::Or::STRING % [object.red!(:as_argument => true), expression]
+          string = (object.is_a?(Array) && [:const, :lvar].include?(object.first)) ? "var %s = %s" : "%s = %s"
+          self << string % [object.red!, conjunction]
         end
       end
       
       class And < Operator # :nodoc:
         def initialize(object, assignment, options)
           expression = assignment.last.red!(:as_argument => true)
-          receiver = object.red!
-          string = (object.is_a?(Array) && [:const, :lvar].include?(object.first)) ? "var %s = %s && %s" : "%s = %s && %s"
-          self << string % [receiver, receiver, expression]
+          conjunction = Red::LogicNode::Conjunction::And::STRING % [object.red!(:as_argument => true), expression]
+          string = (object.is_a?(Array) && [:const, :lvar].include?(object.first)) ? "var %s = %s" : "%s = %s"
+          self << string % [object.red!, conjunction]
         end
       end
     end

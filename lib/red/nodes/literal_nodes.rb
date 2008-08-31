@@ -33,7 +33,6 @@ module Red
         # as_argument: duplicates :force_return and adds "function() {
         #   <multiline block>; }()" wrapper to the entire block.
         options = args.pop
-        puts args.last.flatten.inspect
         if options[:as_argument] || options[:force_return] && args.last.is_a?(::Array) && (args.last.first == :iter ? true : !args.last.flatten.include?(:return))
           returner = "return %s" % [args.pop.red!(:as_argument => true)]
         end
@@ -46,6 +45,12 @@ module Red
     class Namespace < LiteralNode # :nodoc:
       def initialize(namespace, class_name, options)
         self << "%s.%s" % [namespace.red!, class_name.red!]
+      end
+      
+      class TopLevel < LiteralNode # :nodoc:
+        def initialize(class_name, options)
+          self << "%s" % [class_name.red!]
+        end
       end
     end
     

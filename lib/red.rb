@@ -31,10 +31,10 @@ module Red
     :call         => CallNode::Method::ExplicitReceiver,
     :case         => LogicNode::Case,
     :class        => DefinitionNode::Class,
-    :cdecl        => AssignmentNode::GlobalVariable,
+    :cdecl        => AssignmentNode::Constant,
     :colon2       => LiteralNode::Namespace,
-    :colon3       => ControlNode::Library,
-    :const        => VariableNode::OtherVariable,
+    :colon3       => LiteralNode::Namespace::TopLevel,
+    :const        => VariableNode::Constant,
     :cvar         => VariableNode::ClassVariable,
     :cvasgn       => AssignmentNode::ClassVariable,
     :cvdecl       => AssignmentNode::ClassVariable,
@@ -119,8 +119,9 @@ module Red
   def self.init
     @@namespace_stack = []
     @@exception_index = 0
-    @@red_classes = %w:Array Function Number Object String:
-    @@red_modules = %w::
+    @@red_constants = %w::
+    @@red_classes   = %w::
+    @@red_modules   = %w::
     @@red_initializers = {'' => [:defn, :initialize, [:scope, [:block, [:args], [:nil]]]]}
   end
   
