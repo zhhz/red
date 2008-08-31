@@ -42,6 +42,7 @@ module Red
         # Go back up one level in the namespace hierarchy, and add this
         # to the list of classes that Red knows about.
         @@red_classes |= [namespaced_class]
+        @@red_constants |= [namespaced_class]
         @@namespace_stack.pop
       end
       
@@ -97,6 +98,7 @@ module Red
         # Go back up one level in the namespace hierarchy, and add this module
         # to the list of modules that Red knows about.
         @@red_modules |= [namespaced_module]
+        @@red_constants |= [namespaced_module]
         @@namespace_stack.pop
       end
       
@@ -115,13 +117,16 @@ module Red
         arguments = block.delete(block.assoc(:args))[1..-1] || []
         defaults = arguments.delete(arguments.assoc(:block))
         arguments = (block_arg ? arguments << block_arg.last : arguments).map {|arg| arg.red!(:as_argument => true)}
-        contents = [("var blockGivenBool = function() { return !!block; }" if block_arg), defaults.red!(:as_default => true), block.red!(:force_return => function != 'initialize', :indent => indent)].compact.reject {|x| x.empty? }
+        contents = [("this.blockGivenBool = function() { return !!block; }" if block_arg), defaults.red!(:as_default => true), block.red!(:force_return => function != 'initialize', :indent => indent)].compact.reject {|x| x.empty? }
         return [arguments, contents]
       end
       
       class Instance < Method # :nodoc:
         def initialize(function_name, scope, options)
-          function = function_name.red!
+          function = case function_name
+            when :<< : :_ltlt
+            else function_name
+          end.red!
           block = scope.assoc(:block)
           indent = options[:as_property] ? 2 : 0
           arguments, contents = self.args_and_contents_from(block, function, indent)
@@ -140,7 +145,7 @@ module Red
           block = scope.assoc(:args) ? (scope << [:block, scope.delete(scope.assoc(:args)), [:nil]]).assoc(:block) : scope.assoc(:block)
           block << [:nil] if block.assoc(:block_arg) == block.last
           arguments, contents = self.args_and_contents_from(block, function)
-          self << "%s = function %s(%s) { %s; }" % [receiver, function, arguments.join(', '), contents]
+          self << "%s = function %s(%s) { %s; }" % [receiver, function, arguments.join(', '), contents.join(";\n")]
         end
       end
     end
