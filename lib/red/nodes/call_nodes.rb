@@ -1,113 +1,118 @@
 module Red
   class CallNode < String # :nodoc:
-    class Block < CallNode # :nodoc:
-      def initialize(receiver, block_args, *args)
-        options = args.pop
-        expression = args[0].is_a?(Array) && args[0][0] == :block ? args[0] : [:block, args[0] || [:nil]]
-        block_arguments = (block_args.is_a?(Array) && block_args.first == :masgn) ? block_args.assoc(:array)[1..-1].map { |dasgn_curr| dasgn_curr.last.red!(:as_argument => true) } : [(block_args.last rescue nil).red!(:as_argument => true)]
-        block = "function(%s) { %s; }._as(this)" % [block_arguments.join(', '), expression.red!(:force_return => true)]
-        if  [:proc, :lambda].include?(receiver.last)
-          self << block
-        else
-          receiver_arguments_sexp = receiver.last.is_a?(Array) && receiver.last.first == :array ? receiver.last[1..-1] : []
-          receiver_arguments = receiver_arguments_sexp.map {|arg| arg.red!(:as_argument => true, :quotes => "'")}
-          object = receiver.reject{|sexp| sexp == receiver_arguments_sexp}.red!(:suppress_arguments => true)
-          self << "%s(%s)" % [object, (receiver_arguments + [block]).compact.join(', ')]
-        end
+    class Ampersand < CallNode # :nodoc:
+      # [:block_pass, {expression}, {expression}]
+      def initialize(block_pass_sexp, function_call_sexp, options)
+        function_call = function_call_sexp.red!(options.merge(:block_string => block_pass_sexp.red!))
+        self << "%s" % [function_call]
       end
-      
-      class Ampersand < Block # :nodoc:
-        def initialize(block_name, function_call, options)
-          function_call.last.is_a?(Array) && function_call.last.first == :array ? function_call.last << block_name : function_call << [:array, block_name]
-          self << function_call.red!(options)
-        end
+    end
+    
+    class Block < CallNode # :nodoc:
+      # [:iter, {expression}, {0 | :dasgn_curr | :masgn, [:array, {:dasgn_curr, :dasgn_curr, ...}]}, (expression | :block)]
+      def initialize(function_call_sexp, block_arguments_array_sexp, block_body_sexp = nil, options = {})
+        (options = block_body_sexp) && (block_body_sexp = [:block, [:nil]]) if block_body_sexp.is_a?(::Hash)
+        block_arguments = block_arguments_array_sexp.is_sexp?(:masgn) ? block_arguments_array_sexp.assoc(:array)[1..-1].map {|dasgn_curr| dasgn_curr.last.red! }.join(",") : (block_arguments_array_sexp && block_arguments_array_sexp != 0 ? block_arguments_array_sexp.last : nil).red!
+        block_body      = (block_body_sexp.is_sexp?(:block) ? block_body_sexp : [:block, block_body_sexp]).red!(:force_return => true)
+        block_string    = "function(%s){%s;}" % [block_arguments, block_body]
+        block_string   << ".m$(this)" unless [:instance_eval, :class_eval].include?(function_call_sexp.last)
+        function_call   = function_call_sexp.red!(options.merge(:block_string => block_string))
+        self << "%s" % [function_call]
+      end
+    end
+    
+    class Defined < CallNode # :nodoc:
+      # [:defined, {expression}]
+      def initialize(expression_sexp, options)
+        expression = expression_sexp.red!(:as_argument => true)
+        self << "!(typeof(%s) == 'undefined')" % [expression]
       end
     end
     
     class Match # :nodoc:
-      def initialize(regex, expression)
-        @regex, @expression = [regex, expression].build_nodes
-      end
-      
-      def compile_node(options = {}) # :nodoc:
-        regex = @regex.compile_node
-        expression = @expression.compile_node(:as_argument => true)
-        "%s.match(%s)" % [regex, expression]
-      end
+    # # [:match2, {expression}, {expression}] => when first expression is RegExp e.g. /foo/ =~ foo | /foo/ =~ /foo/
+    # def initialize(regex, expression)
+    #   @regex, @expression = [regex, expression].build_nodes
+    # end
+    # 
+    # def compile_node(options = {}) # :nodoc:
+    #   regex = @regex.compile_node
+    #   expression = @expression.compile_node(:as_argument => true)
+    #   "%s.match(%s)" % [regex, expression]
+    # end
       
       class Reverse < Match # :nodoc:
-        def initialize(expression, regex)
-          @regex, @expression = [regex, expression].build_nodes
-        end
+      # # [:match3, {expression}, {expression}] => when only second expression is RegExp e.g. foo =~ /foo/
+      # def initialize(expression, regex)
+      #   @regex, @expression = [regex, expression].build_nodes
+      # end
       end
     end
     
     class Method < CallNode # :nodoc:
-      def sugar(receiver, function, args, options)
-        object = receiver.red!(:as_argument => true)
-        arguments = "(%s)" % [args.last.is_a?(Array) && args.last.first == :array ? args.last[1..-1].map {|arg| arg.red!(:as_argument => true, :quotes => "'")} : []].join(', ') unless options[:suppress_arguments]
-        single_arg = (args.last[1] rescue nil).red!(:as_argument => true)
-        case function
-        when :-, :+, :<, :>, :>=, :<=, :%, :*, :/, :^, :===, :in, :instanceof
-          string = options[:as_argument] ? "(%s %s %s)" : "%s %s %s"
-          self << string % [object, function.red!, single_arg]
-        when :include
-          namespace = @@namespace_stack.empty? ? 'Object' : @@namespace_stack.join('.')
-          instance_methods = "for (var x in %s) { if (!(x.slice(0,2) == '$$')) { %s.prototype[x] = _mod[x]; }; }" % [single_arg, namespace, single_arg]
-          class_variables = "for (var x in %s) { if (!(x == 'prototype')) { %s[x] = %s[x]; }; }" % [single_arg, namespace, single_arg]
-          self << [instance_methods, class_variables].join(";\n\n")
-        when :[]
-          object = "this" if receiver.nil?
-          args = (args.last.is_a?(Array) && args.last.first == :array) ? args.last[1..-1] : []
-          self << "%s._g%s" % [object, arguments]
-          #if args.assoc(:str) || args.assoc(:lit) && args.assoc(:lit)[1].is_a?(Symbol)
-          #  self << "%s.%s" % [object, args[0][1]]
-          #else
-          #  self << "%s[%s]" % [object, single_arg]
-          #end
-        when :raise
-          self << "throw(%s)" % [single_arg]
-        when :new
-          self << "new %s%s" % [object, arguments]
-        when :==
-          self << "%s.eqlBool(%s)" % [object, single_arg]
-        when :<<
-          self << "%s._ltlt(%s)" % [object, single_arg]
-        else
-          object = receiver.nil? ? "" : "%s." % [object]
-          self << "%s%s%s" % [object, function.red!, arguments]
-        end
-      end
-      
       class ExplicitReceiver < Method # :nodoc:
-        def initialize(receiver, function, *args)
-          (args << function) && function = receiver && receiver = nil if args.empty?
-          options = args.pop
-          self.sugar(receiver, function, args, options)
+        # [:call, {expression}, :foo, (:array, {expression}, {expression}, ...)]
+        def initialize(receiver_sexp, function_sexp, *arguments_array_sexp)
+          options     = arguments_array_sexp.pop
+          receiver    = receiver_sexp.red!(:as_receiver => true)
+          function    = (METHOD_ESCAPE[function_sexp] || function_sexp).red!
+          args_array  = arguments_array_sexp.last.is_sexp?(:array) ? arguments_array_sexp.last[1..-1].map {|argument_sexp| argument_sexp.red!(:as_argument => true)} : []
+          args_array += [options[:block_string]] if options[:block_string]
+          arguments   = args_array.join(",")
+          unless function_sexp == :new
+            self << "%s.m$%s(%s)" % [receiver, function, arguments]
+          else
+            self << "%s(%s)(%s)" % [function, receiver, arguments]
+          end
         end
       end
       
       class ImplicitReceiver < Method # :nodoc:
-        def initialize(function, *args)
-          options = args.pop
-          self.sugar([:self], function, args, options)
+        # [:fcall, :foo, (:array, {expression}, {expression}, ...)]
+        def initialize(function_sexp, *arguments_array_sexp)
+          options     = arguments_array_sexp.pop
+          function    = (METHOD_ESCAPE[function_sexp] || function_sexp).red!
+          args_array  = arguments_array_sexp.last.is_sexp?(:array) ? arguments_array_sexp.last[1..-1].map {|argument_sexp| argument_sexp.red!(:as_argument => true)} : []
+          args_array += [options[:block_string]] if options[:block_string]
+          arguments   = args_array.join(",")
+          unless function_sexp == :[]
+            self << "m$%s(%s)" % [function, arguments]
+          else
+            self << "this.m$%s(%s)" % [function, arguments]
+          end
         end
       end
     end
     
     class Super < CallNode # :nodoc:
-      def initialize(*args)
-        options = args.pop
-        arguments = (args.first[1..-1] rescue []).unshift([:self]).map {|arg| arg.red!(:as_argument => true) }
-        self << "this.class().superclass().prototype.%s.apply(%s)" % [@@red_function, arguments.join(', ')]
+      # [:super, (:array, {expression}, {expression}, ...)]
+      def initialize(*arguments_array_sexp)
+        options     = arguments_array_sexp.pop
+        args_array  = arguments_array_sexp.last.is_sexp?(:array) ? arguments_array_sexp.last[1..-1].map {|argument_sexp| argument_sexp.red!(:as_argument => true)} : []
+        args_array  = ["this"] + args_array
+        args_array += [options[:block_string]] if options[:block_string]
+        arguments   = args_array.join(",")
+        self << "this.m$class().m$superclass().prototype.m$%s.call(%s)" % [@@red_function, arguments]
+      end
+      
+      class Delegate < Super # :nodoc:
+        # [:zsuper]
+        # FIX: Super::Delegate ignores block_string option when called inside an :iter e.g. super { foo }; this is an easy enough fix but annoying in that it needs fixing
+        def initialize(*arguments_array_sexp)
+          options = arguments_array_sexp.pop
+          self << "this.m$class().m$superclass().prototype.m$%s.apply(this,arguments)" % [@@red_function]
+        end
       end
     end
     
     class Yield < CallNode # :nodoc:
-      def initialize(args = nil, options = {})
-        (options = args) && (args = nil) if args.is_a?(Hash)
-        arguments = args ? ( args.first == :array ? args[1..-1].map {|arg| arg.red!(:as_argument => true) } : [args.red!(:as_argument => true)] ) : []
-        self << "block(%s)" % [arguments.join(', ')]
+      # [:yield, (expression | :array, {expression}, {expression}, ...)]
+      def initialize(arguments_array_sexp = nil, options = {})
+        (options = arguments_array_sexp) && (arguments_array_sexp = [:array]) if arguments_array_sexp.is_a?(Hash)
+        argument_sexps = arguments_array_sexp.is_sexp?(:array) ? arguments_array_sexp[1..-1] || [] : [arguments_array_sexp]
+        args_array     = argument_sexps.map {|argument_sexp| argument_sexp.red!(:as_argument => true)}
+        arguments      = args_array.join(",")
+        self << "%s(%s)" % [@@red_block_arg, arguments]
       end
     end
   end

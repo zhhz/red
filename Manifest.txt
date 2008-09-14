@@ -17,7 +17,6 @@ lib/red/plugin.rb
 lib/red/version.rb
 lib/red/nodes/assignment_nodes.rb
 lib/red/nodes/call_nodes.rb
-lib/red/nodes/constant_nodes.rb
 lib/red/nodes/control_nodes.rb
 lib/red/nodes/data_nodes.rb
 lib/red/nodes/definition_nodes.rb
@@ -25,7 +24,6 @@ lib/red/nodes/illegal_nodes.rb
 lib/red/nodes/literal_nodes.rb
 lib/red/nodes/logic_nodes.rb
 lib/red/nodes/variable_nodes.rb
-lib/red/nodes/wrap_nodes.rb
 script/console
 script/destroy
 script/generate

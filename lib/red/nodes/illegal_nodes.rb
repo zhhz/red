@@ -2,19 +2,13 @@ module Red
   class IllegalNode # :nodoc:
     class FlipflopNode < IllegalNode # :nodoc:
       def initialize(*args)
-        raise(BuildError::NoFlipflops, "JavaScript does not support flip-flop operators")
+        raise(BuildError::NoFlipflops, "Flip-flop operators are not supported")
       end
     end
     
     class MatchNode < IllegalNode # :nodoc:
       def initialize(*args)
-        raise(BuildError::NoArbitraryMatch, "JavaScript does not support arbitrary boolean matching")
-      end
-    end
-    
-    class MultipleAssignmentNode < IllegalNode # :nodoc:
-      def initialize(*args)
-        raise(BuildError::NoMultipleAssignment, "JavaScript does not support catalogued assignment using multiple comma-separated expressions")
+        raise(BuildError::NoArbitraryMatch, "Boolean matching is not supported")
       end
     end
     
@@ -26,25 +20,25 @@ module Red
     
     class RedoNode < IllegalNode # :nodoc:
       def initialize(*args)
-        raise(BuildError::NoDoOvers, "JavaScript has no redo keyword")
+        raise(BuildError::NoDoOvers, "Redo is not supported")
       end
     end
     
     class RegexEvaluationNode < IllegalNode # :nodoc:
       def initialize(*args)
-        raise(BuildError::NoRegexEvaluation, "Construction of JavaScript regular expressions with evaluated content is not supported")
+        raise(BuildError::NoRegexEvaluation, "Construction of regular expressions with evaluated content is not supported")
       end
     end
     
     class RetryNode < IllegalNode # :nodoc:
       def initialize(*args)
-        raise(BuildError::NoDoOvers, "JavaScript has no retry keyword")
+        raise(BuildError::NoDoOvers, "Retry is not supported")
       end
     end
     
     class SymbolEvaluationNode < IllegalNode # :nodoc:
       def initialize(*args)
-        raise(BuildError::NoSymbolEvaluation, "Construction of JavaScript identifiers through evaluated symbols is not supported")
+        raise(BuildError::NoSymbolEvaluation, "Construction of identifiers through evaluated symbols is not supported")
       end
     end
   end

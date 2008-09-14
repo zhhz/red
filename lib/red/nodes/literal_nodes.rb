@@ -1,95 +1,90 @@
 module Red
   class LiteralNode < String # :nodoc:
     class Array < LiteralNode # :nodoc:
-      def initialize(*args)
-        options = args.pop
-        elements = args.map {|element| element.red!(:quotes => "'") }
-        self << "[%s]" % elements.join(', ')
+      # [:zarray]
+      # [:to_ary, {expression}]
+      # [:array,  {expression}, {expression}, ...]
+      def initialize(*element_sexps)
+        options  = element_sexps.pop
+        elements = element_sexps.map {|element_sexp| element_sexp.red!(:as_argument => true)}.join(",")
+        self << "[%s]" % [elements]
       end
     end
     
     class Hash < LiteralNode # :nodoc:
-      def initialize(*args)
-        options = args.pop
-        pairs = ::Hash[*args].map do |k,v|
-          #raise(BuildError::NoArbitraryHashKeys, "JavaScript does not support non-string objects as hash keys") unless [:string, :symbol].include?(k.data_type)
-          "%s: %s" % [k.red!(:quotes => "'"), v.red!(:as_argument => true)]
-        end
-        self << "new Hash({ %s })" % [pairs.join(', ')]
-      end
-    end
-    
-    class Uninterpreted < LiteralNode # :nodoc:
-      def initialize(*args)
-        options = args.pop
-        self << args.map {|piece| piece.red!(:quotes => '')}.join
+      # [:hash, ({expression->key}, {expression->value}, ...)]
+      def initialize(*element_sexps)
+        options  = element_sexps.pop
+        elements = element_sexps.map {|element_sexp| element_sexp.red!(:as_argument => true)}.join(",")
+        self << "Hash.m$_brkt(%s)" % [elements]
       end
     end
     
     class Multiline < LiteralNode # :nodoc:
-      def initialize(*args)
+      # [:block, {expression}, {expression}, ...]
+      def initialize(*expression_sexps)
         # force_return: changes final expression to "return <expression>",
         #   unless there is already return anywhere inside <expression>.
         # as_argument: duplicates :force_return and adds "function() {
         #   <multiline block>; }()" wrapper to the entire block.
-        options = args.pop
-        if options[:as_argument] || options[:force_return] && args.last.is_a?(::Array) && (args.last.first == :iter ? true : !args.last.flatten.include?(:return))
-          returner = "return %s" % [args.pop.red!(:as_argument => true)]
+        options = expression_sexps.pop
+        if options[:as_argument] || options[:as_assignment] || options[:force_return] && expression_sexps.last.is_a?(::Array) && (expression_sexps.last.first == :iter ? true : !expression_sexps.last.flatten.include?(:return))
+          returner = "return %s" % [expression_sexps.pop.red!(:as_argument => true)]
         end
-        string = options[:as_argument] ? "function() { %s; }()" : "%s"
-        lines = (args.map {|line| line.red!(options)} + [returner]).compact
-        self << string % [lines.join(";\n#{options[:indent] ? '  ' * options[:indent] : "\n"}")]
+        string = options[:as_argument] || options[:as_assignment] ? "function(){%s;}.m$(this)()" : "%s"
+        lines = (expression_sexps.map {|line| line.red!(options)} + [returner]).compact.join(";#{options[:as_class_eval] ? "\n" : ''}")
+        self << string % [lines]
       end
     end
     
     class Namespace < LiteralNode # :nodoc:
-      def initialize(namespace, class_name, options)
-        self << "%s.%s" % [namespace.red!, class_name.red!]
+      # [:colon2, {expression}, :Foo]
+      def initialize(namespace_sexp, class_name_sexp, options)
+        namespace  = namespace_sexp.red!(:as_receiver => true)
+        class_name = class_name_sexp.red!
+        self << "%s.%s" % [namespace, class_name]
       end
       
+      # [:colon3, :Foo]
       class TopLevel < LiteralNode # :nodoc:
-        def initialize(class_name, options)
-          self << "%s" % [class_name.red!]
+        def initialize(class_name_sexp, options)
+          class_name = class_name_sexp.red!
+          self << "%s" % [class_name]
         end
       end
     end
     
     class Other < LiteralNode # :nodoc:
-      def initialize(value, options)
-        self << value.red!(options)
+      # [:lit,    {symbol | number | regexp | range}]
+      # [:svalue, [:array, {expression}, {expression}, ...]]
+      # [:to_ary, {expression}] => right side of :masgn when arguments are too few
+      def initialize(value_sexp = nil, options = {})
+        (options = value_sexp) && (value_sexp = nil) if value_sexp.is_a?(::Hash)
+        value = value_sexp.red!(options)
+        self << "%s" % [value]
       end
     end
     
     class Range < LiteralNode # :nodoc:
-      #def initialize(*args)
-      #  case @@red_library
-      #    when :Prototype : super(*args)
-      #    else              raise(BuildError::NoRangeConstructor, "#{@@red_library} JavaScript library has no literal range constructor")
-      #  end
-      #end
-      #
-      #def compile_node(options = {})
-      #  start = @initial.compile_node(:as_argument => true)
-      #  finish = @subsequent.first.compile_node(:as_argument => true)
-      #  case @@red_library
-      #    when :Prototype : return "$R(%s, %s)" % [start, finish]
-      #    else              ""
-      #  end
-      #end
-      #
+      # [:dot2, {expression}, {expression}]
+      def initialize(start_sexp, finish_sexp, options)
+        start  = start_sexp.red!(:as_argument => true)
+        finish = finish_sexp.red!(:as_argument => true)
+        self << "new Range(%s,%s,false)" % [start, finish]
+      end
+      
       class Exclusive < Range # :nodoc:
-      #  def compile_node(options = {})
-      #    start = @initial.compile_node(:as_argument => true)
-      #    finish = @subsequent.first.compile_node(:as_argument => true)
-      #    case @@red_library
-      #      when :Prototype : return "$R(%s, %s, true)" % [start, finish]
-      #      else              ""
-      #    end
-      #  end
+        # [:dot3, {expression}, {expression}]
+        def initialize(start_sexp, finish_sexp, options)
+          start  = start_sexp.red!(:as_argument => true)
+          finish = finish_sexp.red!(:as_argument => true)
+          self << "new Range(%s,%s,true)" % [start, finish]
+        end
       end
     end
     
     class Splat < LiteralNode # :nodoc:
+      # [:splat, {expression}]
       #def initialize(*args)
       #  case @@red_library
       #    when :Prototype : super(*args)
@@ -107,11 +102,24 @@ module Red
     end
     
     class String < LiteralNode # :nodoc:
-      def initialize(*args)
-        options = args.pop
-        initial = args.shift.red!(options)
-        subsequent = args.map { |element| " + %s" % [element.red!(:as_argument => true)] }.join
-        self << [initial, subsequent].join
+      # [:str,   "foo"]
+      # [:dstr,  "foo", {expression}, {expression}, ...]
+      # [:evstr, {expression}]
+      def initialize(*element_sexps)
+        options  = element_sexps.pop
+        elements = element_sexps.map {|element_sexp| element_sexp.red!(options.merge(:as_argument => true, :as_string_element => true)) }.join(",")
+        string   = options[:unquoted] || options[:as_string_element] ? "%s" : element_sexps.size > 1 ? "$Q(%s)" : "$q(%s)"
+        self << string % [elements]
+      end
+    end
+    
+    class Uninterpreted < LiteralNode # :nodoc:
+      # [:xstr,  "foo"]
+      # [:dxstr, "foo", {expression}, {expression}, ...]
+      def initialize(*element_sexps)
+        options  = element_sexps.pop
+        elements = element_sexps.map {|element_sexp| element_sexp.red!(:unquoted => true, :no_escape => true) }.join
+        self << "%s" % [elements]
       end
     end
   end

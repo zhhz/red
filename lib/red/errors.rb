@@ -1,10 +1,5 @@
 module Red
   class BuildError < StandardError # :nodoc:
-    # Raised when a hash is given a key other than a +String+ or +Symbol+
-    # object.
-    class NoArbitraryHashKeys < BuildError # :nodoc:
-    end
-    
     # Raised when a lone +Regex+ is used as a condition.
     class NoArbitraryMatch < BuildError # :nodoc:
     end
@@ -26,17 +21,8 @@ module Red
     class NoFlipflops < BuildError # :nodoc:
     end
     
-    # Raised when a comma-separated multiple assignment expression is used.
-    class NoMultipleAssignment < BuildError # :nodoc:
-    end
-    
     # Raised when a +next+ keyword is followed by an argument.
     class NoNextArguments < BuildError # :nodoc:
-    end
-    
-    # Raised when the active JavaScript library has no native literal range
-    # constructor.
-    class NoRangeConstructor < BuildError # :nodoc:
     end
     
     # Raised when a +Regex+ literal declaration contains evaluated content.

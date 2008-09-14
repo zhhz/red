@@ -1,56 +1,85 @@
 module Red
   class ControlNode < String # :nodoc:
     class Begin < ControlNode # :nodoc:
-      def initialize(body, options)
-        self << body.red!(:force_return => true)
+      # [:begin, {expression | :block}]
+      def initialize(body_sexp, options)
+        body = body_sexp.red!(:force_return => true)
+        self << "%s" % [body]
       end
     end
     
     class Ensure < ControlNode # :nodoc:
-      def initialize(attempted, ensure_body, options)
-        string = (attempted.first == :rescue) ? "%s finally { %s; }" : "try { %s; } finally { %s; }"
-        string = options[:as_argument] ? "function() { %s; }()" % [string] : string
-        attempted = (attempted.is_a?(Array) && [:block, :rescue].include?(attempted.first)) ? attempted : [:block, attempted]
-        ensure_body = (ensure_body.is_a?(Array) && ensure_body.first) == :block ? ensure_body : [:block, ensure_body]
-        self << string % [attempted.red!(:force_return => options[:as_argument]), ensure_body.red!(:force_return => options[:as_argument])]
+      # [:ensure, {expression | :block}, {expression | :block}]
+      def initialize(attempted_sexp, ensure_body_sexp, options)
+        attempted = (attempted_sexp.is_sexp?(:block, :rescue) ? attempted_sexp : [:block, attempted_sexp]).red!(:force_return => options[:as_argument])
+        ensure_body = (ensure_body_sexp.is_sexp?(:block) ? ensure_body : [:block, ensure_body]).red!(:force_return => options[:as_argument])
+        string = attempted_sexp.is_sexp?(:rescue) ? "%sfinally{%s;}" : "try{%s;}finally{%s;}"
+        string = (options[:as_argument] ? "function(){%s;}()" : "%s") % [string]
+        self << string % [attempted, ensure_body]
       end
     end
     
     class Rescue < ControlNode # :nodoc:
-      def initialize(attempted, rescue_body, options)
-        #raise(BuildError::NoSpecificRescue, "JavaScript does not support rescuing of specific exception classes") unless !rescue_body[1]
+      # [:rescue, {expression | :block}, [:resbody, {nil | :array, {expression}, {expression}, ...}, (:block), {expression | :block}]]
+      def initialize(attempted_sexp, rescue_body_sexp, options)
+        #raise(BuildError::NoSpecificRescue, "Rescuing of specific exception classes is not supported") unless !rescue_body[1]
         string = "try { %s; } catch(%s) { %s; }"
-        string = options[:as_argument] ? "function() { %s; }()" % [string] : string
-        if (block = (rescue_body.assoc(:block) || [])[1..-1]) && block.first.last == [:gvar, %s($!)]
+        string = options[:as_argument] ? "function() { %s; }.m$(this)()" % [string] : string
+        if (block = (rescue_body_sexp.assoc(:block) || [])[1..-1]) && block.first.last == [:gvar, %s($!)]
           exception_variable = block.shift[1].red!
           rescued = block.unshift(:block)
         else
-          exception_variable = :e
-          rescued = rescue_body[2].is_a?(Array) && rescue_body[2].first == :block ? rescue_body[2] : [:block, rescue_body[2]]
+          exception_variable = "e"
+          rescued = rescue_body_sexp.last.is_sexp?(:block) ? rescue_body_sexp.last : [:block, rescue_body_sexp.last]
         end
-        attempted = attempted.is_a?(Array) && attempted.first == :block ? attempted : [:block, attempted]
-        self << string % [attempted.red!, exception_variable, rescued.red!]
+        attempted = attempted_sexp.is_sexp?(:block) ? attempted.red! : [:block, attempted].red!
+        self << string % [attempted, exception_variable, rescued.red!]
         #self << string % [attempted.red!(:force_return => options[:as_argument] || options[:force_return]), exception_variable, rescued.red!(:force_return => options[:as_argument] || options[:force_return])]
       end
     end
     
     class For < ControlNode # :nodoc:
-      def initialize(source, iterator, body, options)
-        if [:xstr, :dxstr].include?(source.first)
-          self << "for (%s) { %s; }" % [source.red!, body.red!]
+      # [:for, {expression}, {expression}, {expression | :block}]
+      def initialize(source_sexp, iterator_assignment_sexp, body_sexp, options)
+        body = body_sexp.red!
+        unless source_sexp.is_sexp?(:xstr, :dxstr)
+          source   = source_sexp.red!(:as_argument => true)
+          iterator = iterator_assignment_sexp.last.red!
+          self << "for(var %s in %s){%s;}" % [iterator, source, body]
         else
-          self << "for (var %s in %s) { %s; }" % [iterator.last.red!, source.red!(:as_argument => true), body.red!]
+          loop_statement = source_sexp.red!
+          self << "for(%s){%s;}" % [loop_statement, body]
         end
       end
     end
     
+    class Keyword < ControlNode # :nodoc:
+      # [:break, (expression)]
+      # [:next, (expression)]
+      def initialize(*arguments_array_sexp)
+        # raise(BuildError::NoBreakArguments, "Break can't take an argument") if self.is_a?(Break) && !args.empty?
+        # raise(BuildError::NoNextArguments, "Next can't take an argument") if self.is_a?(Next) && !args!args.empty?
+        string = case self when Break : "break" when Next : "continue" end
+        self << string
+      end
+      
+      class Break < Keyword # :nodoc:
+      end
+      
+      class Next < Keyword # :nodoc:
+      end
+    end
+    
     class Loop < ControlNode # :nodoc:
-      def initialize(condition, body, run_only_if_condition_met, options)
-        condition = (self.is_a?(Until) ? "!(%s)" : "%s") % [condition.red!(:as_argument => true)]
+      # [:until, {expression}, {expression | :block}, true | false]
+      # [:while, {expression}, {expression | :block}, true | false]
+      def initialize(condition_sexp, body_sexp, run_only_if_condition_met, options)
+        condition = (self.is_a?(Until) ? "!$T(%s)" : "$T(%s)") % [condition_sexp.red!(:as_argument => true)]
+        body      = body_sexp.red!
         if run_only_if_condition_met
-          self << "while (%s) { %s; }" % [condition, body.red!]
+          self << "while(%s){%s;}"   % [condition, body]
         else
-          self << "do { %s; } while (%s)" % [body.red!, condition]
+          self << "do{%s;}while(%s)" % [body, condition]
         end
       end
       
@@ -58,6 +87,15 @@ module Red
       end
       
       class While < Loop # :nodoc:
+      end
+    end
+    
+    class Return < ControlNode # :nodoc:
+      # [:return, (expression)]
+      def initialize(expression_sexp = nil, options = {})
+        (options = expression_sexp) && (expression_sexp = [:nil]) if expression_sexp.is_a?(Hash)
+        expression = expression_sexp.red!(:as_argument => true)
+        self << "return(%s)" % [expression]
       end
     end
   end

@@ -14,20 +14,19 @@ require 'red/nodes/illegal_nodes'
 require 'red/nodes/literal_nodes'
 require 'red/nodes/logic_nodes'
 require 'red/nodes/variable_nodes'
-require 'red/nodes/wrap_nodes'
 
 module Red
   ARRAY_NODES = {
     :and          => LogicNode::Conjunction::And,
-    :argscat      => IllegalNode::MultipleAssignmentNode,
-    :argspush     => IllegalNode::MultipleAssignmentNode,
+    #:argscat      => IllegalNode::MultipleAssignmentNode,
+    #:argspush     => IllegalNode::MultipleAssignmentNode,
     :array        => LiteralNode::Array,
     :attrasgn     => AssignmentNode::Attribute,
     :begin        => ControlNode::Begin,
     :block        => LiteralNode::Multiline,
     :block_arg    => CallNode::Block::Ampersand,
-    :block_pass   => CallNode::Block::Ampersand,
-    :break        => ConstantNode::Break,
+    :block_pass   => CallNode::Ampersand,
+    :break        => ControlNode::Keyword::Break,
     :call         => CallNode::Method::ExplicitReceiver,
     :case         => LogicNode::Case,
     :class        => DefinitionNode::Class,
@@ -40,7 +39,7 @@ module Red
     :cvdecl       => AssignmentNode::ClassVariable,
     :dasgn        => AssignmentNode::LocalVariable,
     :dasgn_curr   => AssignmentNode::LocalVariable,
-    :defined      => WrapNode::Defined,
+    :defined      => CallNode::Defined,
     :defn         => DefinitionNode::Method::Instance,
     :defs         => DefinitionNode::Method::Singleton,
     :dot2         => LiteralNode::Range,
@@ -53,13 +52,13 @@ module Red
     :dxstr        => LiteralNode::Uninterpreted,
     :ensure       => ControlNode::Ensure,
     :evstr        => LiteralNode::String,
-    :false        => ConstantNode::False,
+    :false        => LogicNode::Boolean::False,
     :fcall        => CallNode::Method::ImplicitReceiver,
     :flip2        => IllegalNode::FlipflopNode,
     :flip3        => IllegalNode::FlipflopNode,
     :for          => ControlNode::For,
     :gasgn        => AssignmentNode::GlobalVariable,
-    :gvar         => VariableNode::GlobalVariable,
+    :gvar         => VariableNode::OtherVariable,
     :hash         => LiteralNode::Hash,
     :iasgn        => AssignmentNode::InstanceVariable,
     :if           => LogicNode::If,
@@ -71,11 +70,11 @@ module Red
     :match        => IllegalNode::MatchNode,
     :match2       => CallNode::Match,
     :match3       => CallNode::Match::Reverse,
-    :masgn        => IllegalNode::MultipleAssignmentNode,
+    :masgn        => AssignmentNode::Multiple,
     :module       => DefinitionNode::Module,
-    :next         => ConstantNode::Next,
-    :nil          => ConstantNode::Nil,
-    :not          => WrapNode::Not,
+    :next         => ControlNode::Keyword::Next,
+    :nil          => VariableNode::Keyword::Nil,
+    :not          => LogicNode::Not,
     :op_asgn1     => AssignmentNode::Operator::Bracket,
     :op_asgn2     => AssignmentNode::Operator::Dot,
     :op_asgn_and  => AssignmentNode::Operator::And,
@@ -85,15 +84,16 @@ module Red
     :redo         => IllegalNode::RedoNode,
     :rescue       => ControlNode::Rescue,
     :retry        => IllegalNode::RetryNode,
-    :return       => WrapNode::Return,
+    :return       => ControlNode::Return,
     :sclass       => DefinitionNode::SingletonClass,
-    :scope        => LiteralNode::Other,
-    :self         => ConstantNode::Self,
+    :scope        => DefinitionNode::Scope,
+    :self         => VariableNode::Keyword::Self,
     :splat        => LiteralNode::Splat,
     :super        => CallNode::Super,
     :svalue       => LiteralNode::Other,
     :str          => LiteralNode::String,
-    :true         => ConstantNode::True,
+    :to_ary       => LiteralNode::Array,
+    :true         => LogicNode::Boolean::True,
     :undef        => DefinitionNode::Undef,
     :until        => ControlNode::Loop::Until,
     :vcall        => VariableNode::OtherVariable,
@@ -102,7 +102,7 @@ module Red
     :xstr         => LiteralNode::Uninterpreted,
     :yield        => CallNode::Yield,
     :zarray       => LiteralNode::Array,
-    :zsuper       => CallNode::Super
+    :zsuper       => CallNode::Super::Delegate
   }
   
   DATA_NODES = {
@@ -116,14 +116,39 @@ module Red
     NilClass      => DataNode::Nil
   }
   
+  METHOD_ESCAPE = {
+    :==           => :_eql2,
+    :===          => :_eql3,
+    :=~           => :_eqti,
+    :[]           => :_brkt,
+    :[]=          => :_breq,
+    :<=           => :_lteq,
+    :>=           => :_gteq,
+    :<<           => :_ltlt,
+    :<            => :_lthn,
+    :>            => :_gthn,
+    :'<=>'        => :_ltgt,
+    :|            => :_pipe,
+    :&            => :_ampe,
+    :+            => :_plus,
+    :-            => :_subt,
+    :*            => :_star,
+    :**           => :_str2,
+    :/            => :_slsh,
+    :%            => :_perc,
+    :'^'          => :_care,
+    :~            => :_tild
+  }
+  
   def self.init
     @@namespace_stack = []
     @@exception_index = 0
-    @@red_constants = %w:Function:
-    @@red_classes   = %w:Function:
+    @@red_constants = %w:Red Object Module Class Function Proc Array Number:
+    @@red_classes   = %w:Red Object Module Class Function Proc Array Number:
     @@red_modules   = %w::
     @@red_function  = nil
-    @@red_initializers = {'' => [:defn, :initialize, [:scope, [:block, [:args], [:nil]]]]}
+    @@red_block_arg = nil
+    @@red_scope     = []
   end
   
   def red!(options = {}, reset = false)
@@ -139,16 +164,11 @@ module Red
   
   def translate_to_sexp_array # :nodoc:
     raise TypeError, "Can only translate Strings" unless self.is_a?(String)
-    ParseTree.translate(self.escape_dollar_sign_methods)
+    ParseTree.translate(self)
   end
   
-  def escape_dollar_sign_methods
-    self.gsub(/\$(\$*\w*)\(/,"_r_e_d\\0").gsub('_r_e_d$','_r_e_d').gsub('_r_e_d$','_r_e_dd')
-  end
-  
-  def add_parentheses_wrapper(options)
-    self.replace("(%s)" % self) if options[:perform_if]
-    return self
+  def is_sexp?(*sexp_types)
+    self.is_a?(Array) && sexp_types.include?(self.first)
   end
   
   # def handle_red_error(error) # :nodoc:

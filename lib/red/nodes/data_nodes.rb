@@ -1,70 +1,55 @@
 module Red
   class DataNode < String # :nodoc:
-    def wrap_string(string, left_wrapper = "", right_wrapper = nil)
-      string.gsub!(/'/, "\\\\'") if left_wrapper == "'"
-      string.gsub!(/"/, '\\\\"') if left_wrapper == '"'
-      return "%s%s%s" % [left_wrapper, string, right_wrapper || left_wrapper]
-    end
-    
     class Error < DataNode # :nodoc:
-      #def compile_node(options = {})
-      #  "/*  Error %s  */" % [@value]
-      #end
-      #
-      #def data_type
-      #  :error
-      #end
     end
     
     class Nil < DataNode # :nodoc:
-      def initialize(value, options)
+      # nil
+      def initialize(value_data, options)
         self << ""
       end
     end
     
     class Other < DataNode # :nodoc:
-      def initialize(value, options)
-        self << (options[:as_argument] ? "(%s)" : "%s") % [value.inspect]
+      # 1
+      # /foo/
+      def initialize(value_data, options)
+        value  = value_data.inspect
+        string = options[:as_receiver] ? "(%s)" : "%s"
+        self << string % [value]
       end
     end
     
     class Range < DataNode # :nodoc:
-      #def initialize(*args)
-      #  case @@red_library
-      #    when :Prototype : super(*args)
-      #    else              raise(BuildError::NoRangeConstructor, "#{@@red_library} JavaScript library has no literal range constructor")
-      #  end
-      #end
-      #
-      #def compile_node(options = {})
-      #  case @@red_library
-      #    when :Prototype : return "$R(%s, %s%s)" % self.compile_internals
-      #    else              return ""
-      #  end
-      #end
-      #
-      #def compile_internals(options = {})
-      #  exclusive = @value.exclude_end? ? ", true" : ""
-      #  return [@value.begin, @value.end, exclusive]
-      #end
+      # 1..2
+      def initialize(value_data, options)
+        start     = value_data.begin
+        finish    = value_data.end
+        exclusive = value_data.exclude_end?.inspect
+        self << "new Range(%s,%s,%s)" % [start, finish, exclusive]
+      end
     end
     
     class String < DataNode # :nodoc:
-      def initialize(string, options)
-        options[:quotes] ||= "'"
-        self << wrap_string(string, options[:quotes])
+      # 'foo'
+      def initialize(value_data, options)
+        value  = options[:no_escape] ? value_data : value_data.gsub(/'/, "\\\\'")
+        string = options[:unquoted] ? "%s" : "'%s'"
+        self << string % [value]
       end
     end
     
     class Symbol < DataNode # :nodoc:
-      def initialize(symbol, options)
-        value = self.camelize(symbol.to_s, options[:not_camelized])
-        self << wrap_string(value, options[:quotes])
+      # :foo
+      def initialize(value_data, options)
+        value  = self.camelize(value_data.to_s, options[:not_camelized])
+        string = options[:as_receiver] ? "$q('%s')" : options[:as_argument] ? "'%s'" : "%s"
+        self << string % [value]
       end
       
       def camelize(string, disabled = false)
         return string unless self.camelize?(string) && !disabled
-        words = string.gsub(/@/,'').gsub('?','_bool').gsub('!','_bang').gsub('_r_e_dd','$$').gsub('_r_e_d','$').split(/_| /)
+        words = string.gsub(/@/,'').gsub('?','_bool').gsub('!','_bang').gsub('=','_eql').gsub(/^Object$/,'Red').split(/_| /)
         underscore = words.shift if words.first.empty?
         return (underscore ? '_' : '') + words[0] + words[1..-1].map {|word| word == word.upcase ? word : word.capitalize }.join
       end
