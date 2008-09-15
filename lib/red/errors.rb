@@ -38,10 +38,6 @@ module Red
     class NoSplatConstructor < BuildError # :nodoc:
     end
     
-    # Raised when a +Symbol+ literal declaration contains evaluated content.
-    class NoSymbolEvaluation < BuildError # :nodoc:
-    end
-    
     # Raised when an unknown ParseTree sexp type is called to initialize.
     class UnknownNode < BuildError # :nodoc:
     end

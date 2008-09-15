@@ -35,11 +35,5 @@ module Red
         raise(BuildError::NoDoOvers, "Retry is not supported")
       end
     end
-    
-    class SymbolEvaluationNode < IllegalNode # :nodoc:
-      def initialize(*args)
-        raise(BuildError::NoSymbolEvaluation, "Construction of identifiers through evaluated symbols is not supported")
-      end
-    end
   end
 end
