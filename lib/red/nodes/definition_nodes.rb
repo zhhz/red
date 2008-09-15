@@ -194,8 +194,9 @@ module Red
     
     class Undef < DefinitionNode # :nodoc:
       # [:undef, {expression}]
-      def initialize(variable_name, options)
-        namespaced_function = @@namespace_stack.empty? ? variable_name.red! : (@@namespace_stack + ['prototype', "m$%s" % variable_name.red!]).join('.')
+      def initialize(function_name_sexp, options)
+        function_sexp = function_name_sexp.last.red!
+        namespaced_function = @@namespace_stack.empty? ? function_sexp : (@@namespace_stack + ['prototype', "m$%s" % function_sexp]).join('.')
         self << "delete %s" % [namespaced_function]
       end
     end
