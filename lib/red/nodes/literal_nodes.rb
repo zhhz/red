@@ -55,13 +55,14 @@ module Red
     end
     
     class Other < LiteralNode # :nodoc:
-      # [:lit,    {symbol | number | regexp | range}]
+      # [:lit,    {number | regexp | range}]
       # [:svalue, [:array, {expression}, {expression}, ...]]
       # [:to_ary, {expression}] => right side of :masgn when arguments are too few
       def initialize(value_sexp = nil, options = {})
         (options = value_sexp) && (value_sexp = nil) if value_sexp.is_a?(::Hash)
         symbol_sexp = [:sym, value_sexp] if value_sexp.is_a?(::Symbol)
-        value = (symbol_sexp || value_sexp).red!(options)
+        regexp_sexp = [:regex, value_sexp] if value_sexp.is_a?(::Regexp)
+        value = (regexp_sexp || symbol_sexp || value_sexp).red!(options)
         self << "%s" % [value]
       end
     end
@@ -81,6 +82,17 @@ module Red
           finish = finish_sexp.red!(:as_argument => true)
           self << "new Range(%s,%s,true)" % [start, finish]
         end
+      end
+    end
+    
+    class Regexp < LiteralNode
+      # [:lit,   {regexp}]
+      # ### [:dregex,  "foo", {expression}, {expression}, ...]
+      def initialize(*element_sexps)
+        options  = element_sexps.pop
+        elements = element_sexps.map {|element_sexp| element_sexp.red!(options.merge(:as_argument => true, :as_string_element => true)) }.join(",")
+        string   = element_sexps.size > 1 ? "$R(%s)" : "$r(%s)"
+        self << string % [elements]
       end
     end
     
