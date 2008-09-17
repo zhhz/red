@@ -91,6 +91,7 @@ module Red
       def initialize(*element_sexps)
         options  = element_sexps.pop
         elements = element_sexps.map {|element_sexp| element_sexp.red!(options.merge(:as_argument => true, :as_string_element => true)) }.join(",")
+        elements = "''" if elements == "//"
         string   = element_sexps.size > 1 ? "$R(%s)" : "$r(%s)"
         self << string % [elements]
       end
