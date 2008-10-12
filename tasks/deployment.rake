@@ -14,7 +14,7 @@ task :check_version do
 end
 
 desc 'Install the package as a gem, without generating documentation(ri/rdoc)'
-task :install_gem_no_doc => [:clean, :package] do
+task :ig => [:clean, :package] do
   sh "#{'sudo ' unless Hoe::WINDOZE }gem install pkg/*.gem --no-rdoc --no-ri"
 end
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
-GEM_NAME = 'red' # what ppl will type to install your gem
-RUBYFORGE_PROJECT = 'red'
+GEM_NAME = 'red'
+RUBYFORGE_PROJECT = 'red-js'
 
 require 'rubygems'
 begin

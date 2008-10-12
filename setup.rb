@@ -313,7 +313,7 @@ class ConfigTable
   def value_config?(name)
     lookup(name).value?
   end
-
+  
   class Item
     def initialize(name, template, default, desc)
       @name = name.freeze
@@ -322,41 +322,41 @@ class ConfigTable
       @default = default
       @description = desc
     end
-
+    
     attr_reader :name
     attr_reader :description
-
+    
     attr_accessor :default
     alias help_default default
-
+    
     def help_opt
       "--#{@name}=#{@template}"
     end
-
+    
     def value?
       true
     end
-
+    
     def value
       @value
     end
-
+    
     def resolve(table)
       @value.gsub(%r<\$([^/]+)>) { table[$1] }
     end
-
+    
     def set(val)
       @value = check(val)
     end
-
+    
     private
-
+    
     def check(val)
       setup_rb_error "config: --#{name} requires argument" unless val
       val
     end
   end
-
+  
   class BoolItem < Item
     def config_type
       'bool'
