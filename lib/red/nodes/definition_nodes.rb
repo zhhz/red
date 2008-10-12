@@ -1,11 +1,20 @@
 module Red
   class DefinitionNode < String # :nodoc:
+    class Alias < DefinitionNode # :nodoc:
+      def initialize(new_method_name_sexp, old_method_name_sexp, options)
+        new_method_name = new_method_name_sexp.last.red!
+        old_method_name = old_method_name_sexp.last.red!
+        self << "_.m$%s=_.m$%s" % [new_method_name, old_method_name]
+        @@red_methods |= [old_method_name_sexp.last] unless @@red_import
+      end
+    end
+    
     class Class < DefinitionNode # :nodoc:
       # [:class, :Foo, (expression), [:scope, (expression | :block)]] => superclass doesn't show up sometimes when namespaced a certain way; I forgot what the pattern is though
       def initialize(class_name_sexp, superclass_sexp, scope_sexp, options = {})
         (options = scope_sexp) && (scope_sexp = superclass_sexp) && (superclass_sexp = nil) if scope_sexp.is_a?(Hash)
-        class_name = class_name_sexp.red!
-        superclass = superclass_sexp.red!
+        superclass = (superclass_sexp || [:const, :Object]).red!
+        class_name = "%s" % class_name_sexp.red!
         
         if class_name_sexp.is_sexp?(:colon3)
           old_namespace_stack = @@namespace_stack
@@ -16,6 +25,7 @@ module Red
           namespaced_class    = class_name
           class_name          = class_name_sexp.last.red!
         else
+          class_name = "c$%s" % class_name_sexp.red!
           @@namespace_stack.push(class_name)
           namespaced_class    = @@namespace_stack.join(".")
         end
@@ -23,24 +33,8 @@ module Red
         
         scope = scope_sexp.red!(:as_class_eval => true)
         
-        unless @@red_classes.include?(namespaced_class)
-          constructor = "%s=function %s(){this.m$_assignId();this.m$initialize.apply(this,arguments)}" % [namespaced_class, class_name]
-          classlike   = "var _x;for(_x in Class.prototype){%s[_x]=Class.prototype[_x];}" % [namespaced_class]
-        end
+        self << "\n\n$class('%s',%s,function(){ var _=%s.prototype;\n  %s;\n})" % [namespaced_class.gsub("c$",""), superclass, namespaced_class, scope]
         
-        unless %w(Object).include?(class_name)
-          superclass        = "Red" if superclass.empty?
-          inherit_cvars     = "var _x;for(_x in %s){if(_x.slice(0,2)==='c$'){%s[_x]=%s[_x];};}" % [superclass, namespaced_class, superclass]
-          inherit_methods   = "var _x;for(_x in %s.prototype){if(_x.slice(0,2)==='m$'){%s.prototype[_x]=%s.prototype[_x];};}" % [superclass, namespaced_class, superclass]
-          superclass_method = "%s.m$superclass=function superclass(){return %s;}" % [namespaced_class, superclass] unless %w(Module Class).include?(class_name)
-          inheritance       = [inherit_cvars, inherit_methods, superclass_method].join(";\n")
-        end
-        
-        class_eval_block = "%s.m$instanceEval(function(){var _o=this.prototype;\n_o.m$class=function class(){return %s;};\n%s;})" % [namespaced_class, namespaced_class, scope]
-        
-        self << [constructor, classlike, inheritance, class_eval_block].compact.join(";\n")
-        
-        @@red_classes |= [namespaced_class]
         old_namespace_stack.nil? ? @@namespace_stack.pop : @@namespace_stack = old_namespace_stack
       end
     end
@@ -48,7 +42,7 @@ module Red
     class Module < DefinitionNode # :nodoc:
       # [:module, :Foo, [:scope, (expression | :block)]]
       def initialize(module_name_sexp, scope_sexp, options)
-        module_name = module_name_sexp.red!
+        module_name = "%s" % module_name_sexp.red!
         
         if module_name_sexp.is_sexp?(:colon3)
           old_namespace_stack = @@namespace_stack
@@ -59,6 +53,7 @@ module Red
           module_name         = module_name_sexp.last.red!
           @@namespace_stack.push(module_name)
         else
+          module_name = "c$%s" % module_name_sexp.red!
           @@namespace_stack.push(module_name)
           namespaced_module   = @@namespace_stack.join(".")
         end
@@ -66,15 +61,8 @@ module Red
         
         scope = scope_sexp.red!(:as_class_eval => true)
         
-        unless @@red_modules.include?(namespaced_module)
-          constructor = "%s=new(Module)()" % [namespaced_module]
-        end
+        self << "\n\n$module('%s',function(){ var _=%s.prototype;\n  %s;\n})" % [namespaced_module.gsub("c$",""), namespaced_module, scope]
         
-        module_eval_block = "%s.m$instanceEval(function(){var _o=this.i$_methods;\n%s;})" % [namespaced_module, scope] unless scope.empty?
-        
-        self << [constructor, module_eval_block].compact.join(";\n")
-        
-        @@red_modules |= [namespaced_module]
         @@namespace_stack.pop
       end
     end
@@ -96,6 +84,7 @@ module Red
       class Instance < Method # :nodoc:
         # [:defn, :foo, [:scope, [:block, [:args, (:my_arg1, :my_arg2, ..., :'*my_args', (:block))], (:block_arg, :my_block), {expression}, {expression}, ...]]
         def initialize(function_name_sexp, scope_sexp, options)
+          return if @@red_import && !@@red_methods.include?(function_name_sexp)
           function        = (METHOD_ESCAPE[function_name_sexp] || function_name_sexp).red!
           @@red_function  = function
           block_sexp      = scope_sexp.assoc(:block)
@@ -106,20 +95,17 @@ module Red
           splat_arg       = argument_sexps.pop.to_s[1..-1] if argument_sexps.last && argument_sexps.last.to_s.include?('*')
           argument_sexps += [block_arg_sexp.last] if block_arg_sexp
           args_array      = argument_sexps.map {|argument| argument.red! }
-          block_given     = "var blockGivenBool=(typeof(arguments[arguments.length-1])=='function')" if block_arg_sexp
-          splatten_args   = "var blockGivenBool;var _l=(blockGivenBool?arguments.length-1:arguments.length);#{splat_arg}=[];var i;for(i=#{block_arg_sexp ? argument_sexps.size - 1 : argument_sexps.size};i<_l;++i){#{splat_arg}.push(arguments[i]);};var #{block_arg_sexp.last rescue :_block}=(blockGivenBool?arguments[arguments.length-1]:nil)" if splat_arg
+          splatten_args   = "for(var bg=m$blockGivenBool(arguments[arguments.length-1]),l=bg?arguments.length-1:arguments.length,i=#{block_arg_sexp ? argument_sexps.size - 1 : argument_sexps.size},#{splat_arg}=[];i<l;++i){#{splat_arg}.push(arguments[i]);};var #{block_arg_sexp.last rescue :_block}=(bg?c$Proc.m$new(arguments[arguments.length-1]):nil)" if splat_arg
+          block_arg       = "var #{block_arg_sexp.last rescue :_block}=(m$blockGivenBool(arguments[arguments.length-1])?c$Proc.m$new(arguments[arguments.length-1]):nil)" if block_arg_sexp && !splat_arg
           defaults        = defaults_sexp.red!(:as_argument_default => true) if defaults_sexp
           arguments       = args_array.join(",")
           scope           = scope_sexp.red!(:force_return => function != 'initialize')
-          contents        = [block_given, splatten_args, defaults, scope].compact.join(";")
+          contents        = [splatten_args, block_arg, defaults, scope].compact.join(";")
           if options[:as_class_eval]
-            #string = "_o.m$%s=function %s(%s){%s;}"
-            string = "_o.m$%s=function(%s){%s;}"
+            string = "_.m$%s=function(%s){%s;}"
           else
-            #string = "m$%s=function %s(%s){%s;}"
             string = "m$%s=function(%s){%s;}"
           end
-          #self << string % [function, function, arguments, contents]
           self << string % [function, arguments, contents]
           @@red_block_arg = nil
           @@red_function  = nil
@@ -129,6 +115,7 @@ module Red
       class Singleton < Method # :nodoc:
         # [:defs, {expression}, :foo, [:scope, (:block, [:args, (:my_arg1, :my_arg2, ..., :'*my_args', (:block))], (:block_arg, :my_block), {expression}, {expression}, ...)]
         def initialize(object_sexp, function_name_sexp, scope_sexp, options)
+          return if @@red_import && !@@red_methods.include?(function_name_sexp)
           function        = (METHOD_ESCAPE[function_name_sexp] || function_name_sexp).red!
           @@red_function  = function
           object          = object_sexp.is_sexp?(:self) ? @@namespace_stack.join(".") : object_sexp.red!
@@ -142,13 +129,12 @@ module Red
           splat_arg       = argument_sexps.pop.to_s[1..-1] if argument_sexps.last && argument_sexps.last.to_s.include?('*')
           argument_sexps += [block_arg_sexp.last] if block_arg_sexp
           args_array      = argument_sexps.map {|argument| argument.red! }
-          block_given     = "var blockGivenBool=(typeof(arguments[arguments.length-1])=='function')" if block_arg_sexp
-          splatten_args   = "var blockGivenBool;var _l=(blockGivenBool?arguments.length-1:arguments.length);#{splat_arg}=[];var i;for(i=#{block_arg_sexp ? argument_sexps.size - 1 : argument_sexps.size};i<_l;++i){#{splat_arg}.push(arguments[i]);};var #{block_arg_sexp.last rescue :_block}=(blockGivenBool?arguments[arguments.length-1]:nil)" if splat_arg
+          splatten_args   = "for(var bg=m$blockGivenBool(arguments[arguments.length-1]),l=bg?arguments.length-1:arguments.length,i=#{block_arg_sexp ? argument_sexps.size - 1 : argument_sexps.size},#{splat_arg}=[];i<l;++i){#{splat_arg}.push(arguments[i]);};var #{block_arg_sexp.last rescue :_block}=(bg?c$Proc.m$new(arguments[arguments.length-1]):nil)" if splat_arg
+          block_arg       = "var #{block_arg_sexp.last rescue :_block}=(m$blockGivenBool(arguments[arguments.length-1])?c$Proc.m$new(arguments[arguments.length-1]):nil)" if block_arg_sexp && !splat_arg
           defaults        = defaults_sexp.red!(:as_argument_default => true) if defaults_sexp
           arguments       = args_array.join(",")
           scope           = scope_sexp.red!(:force_return => function != 'initialize')
-          contents        = [block_given, splatten_args, defaults, scope].compact.join(";")
-          #self << "%s=function %s(%s){%s;}" % [singleton, function, arguments, contents]
+          contents        = [splatten_args, block_arg, defaults, scope].compact.join(";")
           self << "%s=function(%s){%s;}" % [singleton, arguments, contents]
           @@red_block_arg = nil
           @@red_function  = nil
@@ -166,7 +152,7 @@ module Red
         end
         variables -= (contents_sexp.delete(contents_sexp.assoc(:args)) || [])[1..-1] || [] # don't want to undefine the arguments in a method definition
         declare    = "var %s" % variables.map {|x| "%s=$u" % x.red! }.uniq.join(",") unless variables.empty?
-        contents   = [declare, contents_sexp.red!(options)].compact.join(";")
+        contents   = [declare, contents_sexp.red!(options)].compact.join(";#{options[:as_class_eval] ? "\n  " : ''}")
         self << "%s" % contents
       end
     end
@@ -195,6 +181,7 @@ module Red
     class Undef < DefinitionNode # :nodoc:
       # [:undef, {expression}]
       def initialize(function_name_sexp, options)
+        return if @@red_import && !@@red_methods.include?(function_name_sexp)
         function_sexp = function_name_sexp.last.red!
         namespaced_function = @@namespace_stack.empty? ? function_sexp : (@@namespace_stack + ['prototype', "m$%s" % function_sexp]).join('.')
         self << "delete %s" % [namespaced_function]

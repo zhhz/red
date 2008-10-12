@@ -6,15 +6,15 @@ module Red
       def initialize(variable_name_sexp, expression_sexp, options)
         class_name    = @@namespace_stack.join(".")
         variable_name = variable_name_sexp.red!
-        expression    = expression_sexp.red!(:as_assignment => true)
-        self << "%s.c$%s=%s" % [class_name, variable_name, expression]
+        expression    = expression_sexp.red!(:as_argument => true)
+        self << "%s.cvset('%s',%s)" % [class_name, variable_name, expression]
       end
     end
     
     class Constant < AssignmentNode # :nodoc:
       # [:cdecl, :Foo, {expression}]
       def initialize(constant_name_sexp, expression_sexp, options)
-        constant_name    = (@@namespace_stack + [constant_name_sexp.red!]).join(".")
+        constant_name    = (@@namespace_stack + ["c$%s" % constant_name_sexp.red!]).join(".")
         @@red_constants |= [constant_name]
         expression       = expression_sexp.red!(:as_assignment => true)
         self << "%s=%s" % [constant_name, expression]
@@ -49,7 +49,6 @@ module Red
         if options[:as_argument_default]
           self << "%s=$T(_a=%s)?_a:%s" % [variable_name, variable_name, expression]
         else
-          #string = (options[:as_argument] || variable_name.is_sexp?(:colon2)) ? "%s = %s" : "var %s = %s"
           self << "%s=%s" % [variable_name, expression]
         end
       end
@@ -95,7 +94,6 @@ module Red
       class Dot < Operator # :nodoc:
         # [:op_asgn_2, {expression}, :foo=, :+ | :* |..., {expression}] => from e.g. "foo.bar ||= 1"
         def initialize(receiver_sexp, writer_sexp, method_sexp, expression_sexp, options)
-          #self << "%s=%s %s %s" % [receiver, receiver, operation.red!, expression.red!(:as_argument => true)]
           receiver   = receiver_sexp.red!(:as_receiver => true)
           reader     = writer_sexp.to_s.gsub(/=/,'').to_sym.red!
           writer     = writer_sexp.red!

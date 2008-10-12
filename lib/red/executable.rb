@@ -9,17 +9,17 @@ module Red # :nodoc:
     puts @files && exit
   end
   
-  def add_unobtrusive(library)
-    @files ||= ''
-    self.build_red_plugin_for_rails(false)
-    self.create_plugin_file(:copy, 'public/javascripts/dom_ready.js', File.join(File.dirname(__FILE__), "../javascripts/#{(library || '').downcase}_dom_ready.js"))
-    self.create_plugin_file(:copy, 'public/javascripts/red/unobtrusive.red', File.join(File.dirname(__FILE__), "../javascripts/red/unobtrusive.red"))
-    
-  rescue Errno::ENOENT
-    puts "There is no Unobtrusive Red support for #{library}"
-  ensure
-    puts @files && exit
-  end
+  # def add_unobtrusive(library)
+  #   @files ||= ''
+  #   self.build_red_plugin_for_rails(false)
+  #   self.create_plugin_file(:copy, 'public/javascripts/dom_ready.js', File.join(File.dirname(__FILE__), "../javascripts/#{(library || '').downcase}_dom_ready.js"))
+  #   self.create_plugin_file(:copy, 'public/javascripts/red/unobtrusive.red', File.join(File.dirname(__FILE__), "../javascripts/red/unobtrusive.red"))
+  #   
+  # rescue Errno::ENOENT
+  #   puts "There is no Unobtrusive Red support for #{library}"
+  # ensure
+  #   puts @files && exit
+  # end
   
   def make_plugin_directory(dir, only_this_directory = false)
     parent_dir = File.dirname(dir)
@@ -67,12 +67,24 @@ module Red # :nodoc:
       exit
     end
     js_output = hush_warnings { File.read(file).translate_to_sexp_array }.red!
-    File.open("%s%s.js" % [dir, filename], 'w') {|f| f.write(js_output)} unless dry_run
+    ruby_js   = compile_ruby_js_source
+    File.open("%s%s.js" % [dir, filename], 'w') {|f| f.write(ruby_js + js_output)} unless dry_run
     print_js(js_output, filename, dry_run)
   end
   
+  def compile_ruby_js_source
+    cache_known_constants = @@red_constants
+    @@red_constants = []
+    @@red_import = true
+    ruby_js = hush_warnings { File.read(File.join(File.dirname(__FILE__), "../source/ruby.rb")).translate_to_sexp_array }.red!
+    @@red_constants = cache_known_constants
+    @@red_methods = INTERNAL_METHODS
+    @@red_import = false
+    return ruby_js
+  end
+  
   def print_js(js_output, filename = nil, dry_run = true) # :nodoc:
-    puts RED_MESSAGES[:output] % [("- #{filename}.js" unless dry_run), js_output, @@red_errors ||= '']
+    puts RED_MESSAGES[:output] % [("- #{filename}.js" unless dry_run), js_output]
   end
   
   RED_MESSAGES = {}
@@ -119,7 +131,6 @@ Use red -h for help.
 %s
 
 =================================
-%s
 
   MESSAGE
 end

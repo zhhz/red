@@ -8,12 +8,8 @@ module Red
     class NoBEGINorEND < BuildError # :nodoc:
     end
     
-    # Raised when a +break+ keyword is followed by an argument.
-    class NoBreakArguments < BuildError # :nodoc:
-    end
-    
-    # Raised when a +redo+ or +retry+ keyword is used.
-    class NoDoOvers < BuildError # :nodoc:
+    # Raised when a +retry+ keyword is used.
+    class NoRetry < BuildError # :nodoc:
     end
     
     # Raised when a flipflop operator is called using <tt>..</tt> or
@@ -21,16 +17,8 @@ module Red
     class NoFlipflops < BuildError # :nodoc:
     end
     
-    # Raised when a +next+ keyword is followed by an argument.
-    class NoNextArguments < BuildError # :nodoc:
-    end
-    
     # Raised when a +Regex+ literal declaration contains evaluated content.
     class NoRegexEvaluation < BuildError # :nodoc:
-    end
-    
-    # Raised when an +Error+ class is passed to +rescue+.
-    class NoSpecificRescue < BuildError # :nodoc:
     end
     
     # Raised when the active JavaScript library has no special array

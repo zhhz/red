@@ -3,7 +3,8 @@ module Red
     class Ampersand < CallNode # :nodoc:
       # [:block_pass, {expression}, {expression}]
       def initialize(block_pass_sexp, function_call_sexp, options)
-        function_call = function_call_sexp.red!(options.merge(:block_string => block_pass_sexp.red!))
+        block_string = "%s.m$toProc()._block" % block_pass_sexp.red!(:as_receiver => true)
+        function_call = function_call_sexp.red!(options.merge(:block_string => block_string))
         self << "%s" % [function_call]
       end
     end
@@ -25,7 +26,7 @@ module Red
       # [:defined, {expression}]
       def initialize(expression_sexp, options)
         expression = expression_sexp.red!(:as_argument => true)
-        self << "!(typeof(%s) == 'undefined')" % [expression]
+        self << "!(typeof(%s)=='undefined')" % [expression]
       end
     end
     
@@ -59,11 +60,8 @@ module Red
           args_array  = arguments_array_sexp.last.is_sexp?(:array) ? arguments_array_sexp.last[1..-1].map {|argument_sexp| argument_sexp.red!(:as_argument => true)} : []
           args_array += [options[:block_string]] if options[:block_string]
           arguments   = args_array.join(",")
-          unless function_sexp == :new
-            self << "%s.m$%s(%s)" % [receiver, function, arguments]
-          else
-            self << "%s(%s)(%s)" % [function, receiver, arguments]
-          end
+          self << "%s.m$%s(%s)" % [receiver, function, arguments]
+          @@red_methods |= [function_sexp] unless @@red_import
         end
       end
       
@@ -75,10 +73,19 @@ module Red
           args_array  = arguments_array_sexp.last.is_sexp?(:array) ? arguments_array_sexp.last[1..-1].map {|argument_sexp| argument_sexp.red!(:as_argument => true)} : []
           args_array += [options[:block_string]] if options[:block_string]
           arguments   = args_array.join(",")
-          unless function_sexp == :[]
-            self << "m$%s(%s)" % [function, arguments]
-          else
+          case function_sexp
+          when :require
+            #cached_import_status = @@red_import
+            #@@red_import = true
+            self << hush_warnings { File.read((arguments_array_sexp.assoc(:array).assoc(:str).last rescue '')).translate_to_sexp_array }.red!
+            #@@red_import = cached_import_status
+          when :[]
             self << "this.m$%s(%s)" % [function, arguments]
+          when :block_given?
+            self << "m$blockGivenBool(%s._block)" % @@red_block_arg
+          else
+            self << "(this.m$%s||m$%s).call(this,%s)" % [function, function, arguments]
+            @@red_methods |= [function_sexp] unless @@red_import
           end
         end
       end
@@ -112,7 +119,7 @@ module Red
         argument_sexps = arguments_array_sexp.is_sexp?(:array) ? arguments_array_sexp[1..-1] || [] : [arguments_array_sexp]
         args_array     = argument_sexps.map {|argument_sexp| argument_sexp.red!(:as_argument => true)}
         arguments      = args_array.join(",")
-        self << "%s(%s)" % [@@red_block_arg, arguments]
+        self << "%s.m$call(%s)" % [@@red_block_arg, arguments]
       end
     end
   end

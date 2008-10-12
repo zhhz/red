@@ -16,7 +16,7 @@ module Red
       def initialize(*element_sexps)
         options  = element_sexps.pop
         elements = element_sexps.map {|element_sexp| element_sexp.red!(:as_argument => true)}.join(",")
-        self << "Hash.m$_brkt(%s)" % [elements]
+        self << "c$Hash.m$_brkt(%s)" % [elements]
       end
     end
     
@@ -28,11 +28,11 @@ module Red
         # as_argument: duplicates :force_return and adds "function() {
         #   <multiline block>; }()" wrapper to the entire block.
         options = expression_sexps.pop
-        if options[:as_argument] || options[:as_assignment] || options[:force_return] && expression_sexps.last.is_a?(::Array) && (expression_sexps.last.first == :iter ? true : !expression_sexps.last.flatten.include?(:return))
+        if options[:as_argument] || options[:as_assignment] || options[:force_return] && expression_sexps.last.is_a?(::Array) && !expression_sexps.last.is_sexp?(:rescue, :ensure, :begin) && (expression_sexps.last.first == :iter ? true : !expression_sexps.last.flatten.include?(:return))
           returner = "return %s" % [expression_sexps.pop.red!(:as_argument => true)]
         end
         string = options[:as_argument] || options[:as_assignment] ? "function(){%s;}.m$(this)()" : "%s"
-        lines = (expression_sexps.map {|line| line.red!(options)} + [returner]).compact.join(";#{options[:as_class_eval] ? "\n" : ''}")
+        lines = (expression_sexps.map {|line| line.red!(options)} + [returner]).compact.reject {|x| x == '' }.join(";#{options[:as_class_eval] ? "\n  " : ''}")
         self << string % [lines]
       end
     end
@@ -42,14 +42,14 @@ module Red
       def initialize(namespace_sexp, class_name_sexp, options)
         namespace  = namespace_sexp.red!(:as_receiver => true)
         class_name = class_name_sexp.red!
-        self << "%s.%s" % [namespace, class_name]
+        self << "%s.c$%s" % [namespace, class_name]
       end
       
       # [:colon3, :Foo]
       class TopLevel < LiteralNode # :nodoc:
         def initialize(class_name_sexp, options)
           class_name = class_name_sexp.red!
-          self << "%s" % [class_name]
+          self << "c$%s" % [class_name]
         end
       end
     end
@@ -72,7 +72,7 @@ module Red
       def initialize(start_sexp, finish_sexp, options)
         start  = start_sexp.red!(:as_argument => true)
         finish = finish_sexp.red!(:as_argument => true)
-        self << "new Range(%s,%s,false)" % [start, finish]
+        self << "c$Range.m$new(%s,%s,false)" % [start, finish]
       end
       
       class Exclusive < Range # :nodoc:
@@ -80,20 +80,17 @@ module Red
         def initialize(start_sexp, finish_sexp, options)
           start  = start_sexp.red!(:as_argument => true)
           finish = finish_sexp.red!(:as_argument => true)
-          self << "new Range(%s,%s,true)" % [start, finish]
+          self << "c$Range.m$new(%s,%s,true)" % [start, finish]
         end
       end
     end
     
-    class Regexp < LiteralNode
-      # [:lit,   {regexp}]
+    class Regexp < LiteralNode # :nodoc:
+      # [:lit, {regexp}]
       # ### [:dregex,  "foo", {expression}, {expression}, ...]
-      def initialize(*element_sexps)
-        options  = element_sexps.pop
-        elements = element_sexps.map {|element_sexp| element_sexp.red!(options.merge(:as_argument => true, :as_string_element => true)) }.join(",")
-        elements = "''" if elements == "//"
-        string   = element_sexps.size > 1 ? "$R(%s)" : "$r(%s)"
-        self << string % [elements]
+      def initialize(regexp_sexp, options)
+        regexp = regexp_sexp.red!(:as_argument => true)
+        self << "$r(%s)" % [regexp]
       end
     end
     

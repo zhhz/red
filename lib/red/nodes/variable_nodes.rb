@@ -5,7 +5,7 @@ module Red
       def initialize(variable_name_sexp, options)
         class_name = @@namespace_stack.join('.')
         variable_name = variable_name_sexp.red!
-        self << "%s.c$%s" % [class_name, variable_name]
+        self << "%s.cvget('%s')" % [class_name, variable_name]
       end
     end
     
@@ -27,7 +27,7 @@ module Red
       
       # [:const, :Foo]
       def initialize(constant_name_sexp, options)
-        constant_name = constant_name_sexp.red!
+        constant_name = "c$%s" % constant_name_sexp.red!
         locally_namespaced_constant = (@@namespace_stack + [constant_name]).join('.')
         i = -1
         begin

@@ -6,7 +6,6 @@ require 'red/errors'
 require 'red/plugin'
 require 'red/nodes/assignment_nodes'
 require 'red/nodes/call_nodes'
-require 'red/nodes/constant_nodes'
 require 'red/nodes/control_nodes'
 require 'red/nodes/data_nodes'
 require 'red/nodes/definition_nodes'
@@ -15,9 +14,10 @@ require 'red/nodes/literal_nodes'
 require 'red/nodes/logic_nodes'
 require 'red/nodes/variable_nodes'
 
-module Red
+module Red # :nodoc:
   ARRAY_NODES = {
     :and          => LogicNode::Conjunction::And,
+    :alias        => DefinitionNode::Alias,
     #:argscat      => IllegalNode::MultipleAssignmentNode,
     #:argspush     => IllegalNode::MultipleAssignmentNode,
     :array        => LiteralNode::Array,
@@ -81,8 +81,9 @@ module Red
     :op_asgn_or   => AssignmentNode::Operator::Or,
     :or           => LogicNode::Conjunction::Or,
     :postexe      => IllegalNode::PostexeNode,
-    :redo         => IllegalNode::RedoNode,
+    :redo         => ControlNode::Keyword::Redo,
     :regex        => LiteralNode::Regexp,
+    :resbody      => ControlNode::RescueBody,
     :rescue       => ControlNode::Rescue,
     :retry        => IllegalNode::RetryNode,
     :return       => ControlNode::Return,
@@ -108,11 +109,11 @@ module Red
   }
   
   DATA_NODES = {
-    Bignum        => DataNode::Other,
-    Fixnum        => DataNode::Other,
-    Float         => DataNode::Other,
+    Bignum        => DataNode::Numeric,
+    Fixnum        => DataNode::Numeric,
+    Float         => DataNode::Numeric,
     Range         => DataNode::Range,
-    Regexp        => DataNode::Other,
+    Regexp        => DataNode::Regexp,
     Symbol        => DataNode::Symbol,
     String        => DataNode::String,
     NilClass      => DataNode::Nil
@@ -121,19 +122,22 @@ module Red
   METHOD_ESCAPE = {
     :==           => :_eql2,
     :===          => :_eql3,
-    :=~           => :_eqti,
-    :[]           => :_brkt,
+    :=~           => :_etld,
+    :[]           => :_brac,
     :[]=          => :_breq,
     :<=           => :_lteq,
     :>=           => :_gteq,
     :<<           => :_ltlt,
+    :>>           => :_gtgt,
     :<            => :_lthn,
     :>            => :_gthn,
     :'<=>'        => :_ltgt,
     :|            => :_pipe,
     :&            => :_ampe,
     :+            => :_plus,
+    :+@           => :_posi,
     :-            => :_subt,
+    :-@           => :_nega,
     :*            => :_star,
     :**           => :_str2,
     :/            => :_slsh,
@@ -142,15 +146,76 @@ module Red
     :~            => :_tild
   }
   
+  NATIVE_CONSTANTS = %w{
+    c$Object
+    c$Module
+    c$Class
+    c$Comparable
+    c$Enumerable
+    c$Kernel
+    c$Math
+    c$Math.c$E
+    c$Math.c$PI
+    c$Array
+    c$Exception
+    c$StandardError
+    c$ArgumentError
+    c$IndexError
+    c$RangeError
+    c$RuntimeError
+    c$TypeError
+    c$FalseClass
+    c$Hash
+    c$MatchData
+    c$NilClass
+    c$Numeric
+    c$Proc
+    c$Range
+    c$Regexp
+    c$Regexp.c$IGNORECASE
+    c$Regexp.c$EXTENDED
+    c$Regexp.c$MULTILINE
+    c$String
+    c$Symbol
+    c$Time
+    c$TrueClass
+  }
+  
+  INTERNAL_METHODS = %w{
+    []
+    <=>
+    ==
+    allocate
+    append_features
+    backtrace
+    block_given?
+    call
+    class
+    extend_object
+    extended
+    hash
+    include
+    included
+    inherited
+    initialize
+    inspect
+    is_a?
+    join
+    new
+    sprintf
+    to_proc
+    to_s
+    to_str
+  }.map {|m| m.to_sym }
+  
   def self.init
     @@namespace_stack = []
-    @@exception_index = 0
-    @@red_constants = %w:Red Object Module Class Function Proc Array Number:
-    @@red_classes   = %w:Red Object Module Class Function Proc Array Number:
-    @@red_modules   = %w::
-    @@red_function  = nil
-    @@red_block_arg = nil
-    @@red_scope     = []
+    @@red_constants   = NATIVE_CONSTANTS
+    @@red_methods     = INTERNAL_METHODS
+    @@red_function    = nil
+    @@red_block_arg   = nil
+    @@red_import      = false
+    return true
   end
   
   def red!(options = {}, reset = false)
@@ -164,7 +229,7 @@ module Red
     end
   end
   
-  def translate_to_sexp_array # :nodoc:
+  def translate_to_sexp_array
     raise TypeError, "Can only translate Strings" unless self.is_a?(String)
     ParseTree.translate(self)
   end
@@ -172,12 +237,6 @@ module Red
   def is_sexp?(*sexp_types)
     self.is_a?(Array) && sexp_types.include?(self.first)
   end
-  
-  # def handle_red_error(error) # :nodoc:
-  #   @@red_errors ||= "\n// Errors"
-  #   @@red_errors << "\n// %s: %s" % [@@exception_index += 1, error]
-  #   return DataNode::ErrorNode.new(@@exception_index)
-  # end
   
   def self.rails
     require 'red/plugin'

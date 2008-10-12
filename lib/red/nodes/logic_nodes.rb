@@ -51,11 +51,11 @@ module Red
       
       class And < Conjunction # :nodoc:
         # FIX: nil && obj produces false instead of nil
-        STRING = "(_a=$T(%s))?((_c=$T(_b=%s))?_b:_c):_a"
+        STRING = "(_a=$T(%s)?(_c=$T(_b=%s)?_b:_c):_a)"
       end
       
       class Or < Conjunction # :nodoc:
-        STRING = "$T(_a=%s)?_a:%s"
+        STRING = "($T(_a=%s)?_a:%s)"
       end
     end
     

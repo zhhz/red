@@ -2,7 +2,7 @@ require 'red/version'
 
 AUTHOR = 'Jesse Sielaff'
 EMAIL = "jesse.sielaff@gmail.com"
-DESCRIPTION = "Red is a Ruby-to-JavaScript transliterator using ParseTree."
+DESCRIPTION = "Red writes like Ruby and runs like JavaScript."
 GEM_NAME = 'red'
 RUBYFORGE_PROJECT = 'red-js'
 HOMEPATH = "http://#{RUBYFORGE_PROJECT}.rubyforge.org"
@@ -36,11 +36,12 @@ REV = nil
 # UNCOMMENT IF REQUIRED:
 # REV = YAML.load(`svn info`)['Revision']
 VERS = Red::VERSION::STRING + (REV ? ".#{REV}" : "")
-RDOC_OPTS = ['--quiet', '--title', 'red documentation',
-    "--opname", "index.html",
-    "--line-numbers",
-    "--main", "README",
-    "--inline-source"]
+RDOC_OPTS = [
+  "--quiet",
+  "--title", "red documentation",
+  "--opname", "index.html",
+  "--line-numbers"
+]
 
 class Hoe
   def extra_deps

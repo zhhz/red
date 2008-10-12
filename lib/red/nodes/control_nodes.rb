@@ -3,7 +3,7 @@ module Red
     class Begin < ControlNode # :nodoc:
       # [:begin, {expression | :block}]
       def initialize(body_sexp, options)
-        body = body_sexp.red!(:force_return => true)
+        body = body_sexp.red!(:force_return => options[:as_assignment] || options[:as_receiver] || options[:as_argument] || options[:force_return])
         self << "%s" % [body]
       end
     end
@@ -11,30 +11,51 @@ module Red
     class Ensure < ControlNode # :nodoc:
       # [:ensure, {expression | :block}, {expression | :block}]
       def initialize(attempted_sexp, ensure_body_sexp, options)
-        attempted = (attempted_sexp.is_sexp?(:block, :rescue) ? attempted_sexp : [:block, attempted_sexp]).red!(:force_return => options[:as_argument])
-        ensure_body = (ensure_body_sexp.is_sexp?(:block) ? ensure_body : [:block, ensure_body]).red!(:force_return => options[:as_argument])
-        string = attempted_sexp.is_sexp?(:rescue) ? "%sfinally{%s;}" : "try{%s;}finally{%s;}"
-        string = (options[:as_argument] ? "function(){%s;}()" : "%s") % [string]
+        #string = (options[:as_argument] || options[:force_return] ? "function(){%s;}()" : "%s") % [string]
+        
+        attempted   = (attempted_sexp.is_sexp?(:block, :rescue) ? attempted_sexp : [:block, attempted_sexp]).red!(:force_return => options[:force_return])
+        ensure_body = (ensure_body_sexp.is_sexp?(:block) ? ensure_body_sexp : [:block, ensure_body_sexp]).red!(:force_return => options[:force_return])
+        string      = attempted_sexp.is_sexp?(:rescue) ? "%sfinally{%s;}" : "try{%s;}finally{%s;}"
+        
         self << string % [attempted, ensure_body]
       end
     end
     
     class Rescue < ControlNode # :nodoc:
-      # [:rescue, {expression | :block}, [:resbody, {nil | :array, {expression}, {expression}, ...}, (:block), {expression | :block}]]
-      def initialize(attempted_sexp, rescue_body_sexp, options)
-        #raise(BuildError::NoSpecificRescue, "Rescuing of specific exception classes is not supported") unless !rescue_body[1]
-        string = "try { %s; } catch(%s) { %s; }"
-        string = options[:as_argument] ? "function() { %s; }.m$(this)()" % [string] : string
-        if (block = (rescue_body_sexp.assoc(:block) || [])[1..-1]) && block.first.last == [:gvar, %s($!)]
-          exception_variable = block.shift[1].red!
-          rescued = block.unshift(:block)
-        else
-          exception_variable = "e"
-          rescued = rescue_body_sexp.last.is_sexp?(:block) ? rescue_body_sexp.last : [:block, rescue_body_sexp.last]
+      # [:rescue, (expression | :block), {:resbody}]
+      def initialize(attempted_sexp, rescue_body_sexp, options = {})
+        (options = rescue_body_sexp) && (rescue_body_sexp = attempted_sexp) && (attempted_sexp = [:nil]) if rescue_body_sexp.is_a?(Hash)
+        
+        string      = "try{%s;}catch(_e){_eRescued=false;%s;if(!_eRescued){throw(_e);};}"
+        if options[:as_argument] || options[:as_assignment]
+          string = "function(){%s;}.m$(this)()" % string
+          options[:force_return] = true
         end
-        attempted = attempted_sexp.is_sexp?(:block) ? attempted.red! : [:block, attempted].red!
-        self << string % [attempted, exception_variable, rescued.red!]
-        #self << string % [attempted.red!(:force_return => options[:as_argument] || options[:force_return]), exception_variable, rescued.red!(:force_return => options[:as_argument] || options[:force_return])]
+        attempted   = (attempted_sexp.is_sexp?(:block) ? attempted_sexp : [:block, attempted_sexp]).red!(:force_return => options[:force_return])
+        rescue_body = rescue_body_sexp.red!(:force_return => options[:force_return])
+        
+        self << "try{%s;}catch(_e){_eRescued=false;%s;if(!_eRescued){throw(_e);};}" % [attempted, rescue_body]
+      end
+    end
+    
+    class RescueBody < ControlNode # :nodoc:
+      # [:resbody, {nil | [:array, {expression}, {expression}, ...]}, (expression | :block), (:resbody)]
+      def initialize(exception_types_array_sexp, block_sexp, rescue_body_sexp = nil, options = {})
+        (options = block_sexp) && (block_sexp = nil) if block_sexp.is_a?(Hash)
+        (options = rescue_body_sexp) && (block_sexp.first==:resbody ? (rescue_body_sexp = block_sexp && block_sexp = nil) : (rescue_body_sexp = nil)) if rescue_body_sexp.is_a?(Hash)
+        
+        if block_sexp.is_sexp?(:block) && block_sexp[1].is_sexp?(:lasgn) && block_sexp[1].last == [:gvar, %s($!)]
+          exception_variable  = "var %s=_e;" % block_sexp.delete(block_sexp.assoc(:lasgn))[1].red!
+        elsif block_sexp.is_sexp?(:lasgn) && block_sexp.last == [:gvar, %s($!)]
+          exception_variable  = "var %s=_e;" % block_sexp[1].red!
+          block_sexp          = [:nil]
+        end
+        
+        exception_types_array = (exception_types_array_sexp || [:array, [:const, :Exception]]).red!
+        block                 = (block_sexp.is_sexp?(:block) ? block_sexp : [:block, block_sexp]).red!(:force_return => options[:force_return])
+        rescue_body           = "else{%s;}" % rescue_body_sexp.red!(:force_return => options[:force_return]) if rescue_body_sexp
+        
+        self << "%sif($eType(_e,%s)){_eRescued=true;%s;}%s" % [exception_variable, exception_types_array, block, rescue_body]
       end
     end
     
@@ -57,16 +78,19 @@ module Red
       # [:break, (expression)]
       # [:next, (expression)]
       def initialize(*arguments_array_sexp)
-        # raise(BuildError::NoBreakArguments, "Break can't take an argument") if self.is_a?(Break) && !args.empty?
-        # raise(BuildError::NoNextArguments, "Next can't take an argument") if self.is_a?(Next) && !args!args.empty?
-        string = case self when Break : "break" when Next : "continue" end
-        self << string
+        options = arguments_array_sexp.pop
+        arguments = arguments_array_sexp.map {|arg| arg.red!(:as_argument => true) }.join(",")
+        keyword = self.class.to_s.split('::').last.downcase
+        self << "$%s(%s)" % [keyword, arguments]
       end
       
       class Break < Keyword # :nodoc:
       end
       
       class Next < Keyword # :nodoc:
+      end
+      
+      class Redo < Keyword # :nodoc:
       end
     end
     

@@ -7,9 +7,6 @@ Rakefile
 bin/red
 config/hoe.rb
 config/requirements.rb
-lib/javascripts/_dom_ready.js
-lib/javascripts/prototype_dom_ready.js
-lib/javascripts/red/unobtrusive.red
 lib/red.rb
 lib/red/errors.rb
 lib/red/executable.rb
@@ -24,6 +21,7 @@ lib/red/nodes/illegal_nodes.rb
 lib/red/nodes/literal_nodes.rb
 lib/red/nodes/logic_nodes.rb
 lib/red/nodes/variable_nodes.rb
+lib/source/ruby.rb
 script/console
 script/destroy
 script/generate
