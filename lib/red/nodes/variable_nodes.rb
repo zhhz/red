@@ -51,7 +51,12 @@ module Red
       # [:nil]
       # [:self]
       def initialize(options)
-        string = case self when Nil : "nil" when Self : "this" end
+        string = case self
+        when Nil
+          "nil"
+        when Self
+          @@red_singleton || "this"
+        end
         self << string
       end
       

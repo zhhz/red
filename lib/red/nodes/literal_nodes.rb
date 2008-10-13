@@ -16,7 +16,7 @@ module Red
       def initialize(*element_sexps)
         options  = element_sexps.pop
         elements = element_sexps.map {|element_sexp| element_sexp.red!(:as_argument => true)}.join(",")
-        self << "c$Hash.m$_brkt(%s)" % [elements]
+        self << "c$Hash.m$_brac(%s)" % [elements]
       end
     end
     

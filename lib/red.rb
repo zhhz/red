@@ -213,6 +213,7 @@ module Red # :nodoc:
     @@red_constants   = NATIVE_CONSTANTS
     @@red_methods     = INTERNAL_METHODS
     @@red_function    = nil
+    @@red_singleton   = nil
     @@red_block_arg   = nil
     @@red_import      = false
     return true
