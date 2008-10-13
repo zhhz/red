@@ -14,7 +14,7 @@ module Red
     class Constant < AssignmentNode # :nodoc:
       # [:cdecl, :Foo, {expression}]
       def initialize(constant_name_sexp, expression_sexp, options)
-        constant_name    = (@@namespace_stack + ["%s" % constant_name_sexp.red!]).join(".c$")
+        constant_name    = ("c$" + (@@namespace_stack + ["%s" % constant_name_sexp.red!]).join(".c$")).gsub("c$c$","c$")
         @@red_constants |= [constant_name]
         expression       = expression_sexp.red!(:as_assignment => true)
         self << "%s=%s" % [constant_name, expression]
