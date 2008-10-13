@@ -183,8 +183,10 @@ module Red # :nodoc:
   
   INTERNAL_METHODS = %w{
     []
+    []=
     <=>
     ==
+    ===
     allocate
     append_features
     backtrace
