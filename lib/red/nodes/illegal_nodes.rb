@@ -14,7 +14,7 @@ module Red
     
     class PostexeNode < IllegalNode # :nodoc:
       def initialize(*args)
-        raise(BuildError::NoBEGINorEND, "BEGIN and END blocks are not supported")
+        raise(BuildError::NoENDBlocks, "END blocks are not supported")
       end
     end
     

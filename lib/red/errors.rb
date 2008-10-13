@@ -4,8 +4,8 @@ module Red
     class NoArbitraryMatch < BuildError # :nodoc:
     end
     
-    # Raised when a +BEGIN+ or +END+ block is used.
-    class NoBEGINorEND < BuildError # :nodoc:
+    # Raised when an +END+ block is used.
+    class NoENDBlocks < BuildError # :nodoc:
     end
     
     # Raised when a +retry+ keyword is used.
@@ -19,11 +19,6 @@ module Red
     
     # Raised when a +Regex+ literal declaration contains evaluated content.
     class NoRegexEvaluation < BuildError # :nodoc:
-    end
-    
-    # Raised when the active JavaScript library has no special array
-    # constructor.
-    class NoSplatConstructor < BuildError # :nodoc:
     end
     
     # Raised when an unknown ParseTree sexp type is called to initialize.
