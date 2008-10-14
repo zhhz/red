@@ -1,3 +1,7 @@
+== 4.0.3 2008-10-14
+
+* Emergency downgrade of dependency support for ParseTree.
+
 == 4.0.2 2008-10-14
 
 * 2 bug fixes:

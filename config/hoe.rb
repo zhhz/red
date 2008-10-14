@@ -8,8 +8,8 @@ RUBYFORGE_PROJECT = 'red-js'
 HOMEPATH = "http://#{RUBYFORGE_PROJECT}.rubyforge.org"
 DOWNLOAD_PATH = "http://rubyforge.org/projects/#{RUBYFORGE_PROJECT}"
 EXTRA_DEPENDENCIES = [
-  ['ParseTree', '>= 2.2.0'],
-  ['rake', '>= 0.8.1']
+  ['ParseTree', '~> 2.2.0'],
+  ['rake', '~> 0.8.1']
 ]
 
 @config_file = "~/.rubyforge/user-config.yml"
