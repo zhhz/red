@@ -1,5 +1,5 @@
 `
-var $u=undefined,$objectId=100,nil=null,$_argTemp=undefined;
+var $u=undefined,$__id__=100,nil=null;
 
 function $break(value){var e=new(Error);e._name='break';e._value=value==null?nil:value;throw(e);};
 function $next(value){var e=new(Error);e._name='next';e._value=value==null?nil:value;throw(e);};
@@ -7,12 +7,12 @@ function $redo(){var e=new(Error);e._name='redo';throw(e);};
 function $return(value){var e=new(Error);e._name='return';e._value=value==null?nil:value;throw(e);};
 function $eType(e,ary){for(var i=0,l=ary.length;i<l;++i){if(e.m$isABool(ary[i])){return true;};};return false;};
 
-c$Object = function(){this._objectId=$objectId++};
-c$Module = function(){this._objectId=$objectId++};
-c$Class  = function(){this._objectId=$objectId++};
+c$Object = function(){this.__id__=$__id__++};
+c$Module = function(){this.__id__=$__id__++};
+c$Class  = function(){this.__id__=$__id__++};
 
-c$Object.prototype.toString=function(){return '#<'+this.m$class()._name+':0x'+(this._objectId*999^4000000).toString(16)+'>'};
-Function.prototype.m$=function(o){var f=this;var p=function(){return f.apply(o,arguments);};p._arity=f.arity;p._objectId=$objectId++;return p;};
+c$Object.prototype.toString=function(){return '#<'+this.m$class()._name+':0x'+(this.__id__*999^4000000).toString(16)+'>'};
+Function.prototype.m$=function(o){var f=this;var p=function(){return f.apply(o,arguments);};p._arity=f.arity;p.__id__=$__id__++;return p;};
 window.m$include=function(){for(var i=0,modules=arguments,l=modules.length;i<l;++i){var mp=modules[i].prototype;for(var x in mp){if(x.slice(0,2)=='m$'){var f=function(){return arguments.callee._source[arguments.callee._name].apply(window,arguments) };f._source=mp;f._name=x;window[x]=f;};};modules[i].m$included(window);};return window;};
 window.m$blockGivenBool=function(){typeof(arguments[0])=='function'}
 
@@ -45,7 +45,7 @@ function $inheritance(newClass,superclass) {
 
 function $classlike(name,newClass) {
   newClass._name = name;
-  newClass._objectId = $objectId++;
+  newClass.__id__ = $__id__++;
   newClass._modules = {};
   for(var x in c$Class.prototype) {
     if(x.slice(0,2)==='m$' && !(newClass == c$Class && x==='m$new')) {
@@ -96,7 +96,7 @@ function $class(name,superclass,block){
   } else {
     switch(name){
       case 'Array':newClass=Array;break;case 'Numeric':newClass=Number;break;
-      default: newClass = function() { this._objectId = $objectId++ };
+      default: newClass = function() { this.__id__ = $__id__++ };
     };
     $inheritance(newClass,superclass);
     $classlike(name,newClass);
@@ -145,7 +145,7 @@ class Object
   # may override this behavior.
   # 
   def ==(other)
-    `this._objectId==other._objectId`
+    `this.__id__==other.__id__`
   end
   
   # call-seq:
@@ -156,7 +156,7 @@ class Object
   # semantics in case statements.
   # 
   def ===(other)
-    `this._objectId==other._objectId`
+    `this.__id__==other.__id__`
   end
   
   # call-seq:
@@ -178,7 +178,7 @@ class Object
   # will share an id.
   # 
   def __id__
-    `this._objectId`
+    `this.__id__`
   end
   
   # call-seq:
@@ -238,8 +238,8 @@ class Object
   # 
   def clone
     `var result={}`
-    `for(var x in this){if(x!='_objectId'){result[x]=this[x];};}`
-    `result._objectId=$objectId++`
+    `for(var x in this){if(x!='__id__'){result[x]=this[x];};}`
+    `result.__id__=$__id__++`
     return `result`
   end
   
@@ -258,8 +258,8 @@ class Object
   # 
   def dup
     `var result=this.m$class.m$new()`
-    `for(var x in this){if(x!='_objectId'&&x.slice(0,2)!='i$'){result[x]=this[x];};}`
-    `result._objectId=$objectId++`
+    `for(var x in this){if(x!='__id__'&&x.slice(0,2)!='i$'){result[x]=this[x];};}`
+    `result.__id__=$__id__++`
     return `result`
   end
   
@@ -286,7 +286,7 @@ class Object
   # may override this behavior.
   # 
   def eql?(other)
-    `this._objectId==other._objectId`
+    `this.__id__==other.__id__`
   end
   
   # call-seq:
@@ -308,7 +308,7 @@ class Object
   # may override this behavior.
   # 
   def equal?(other)
-    `this._objectId==other._objectId`
+    `this.__id__==other.__id__`
   end
   
   # call-seq:
@@ -350,7 +350,7 @@ class Object
   # <tt>a.hash == b.hash</tt>, and is typically overridden in child classes.
   # 
   def hash
-    `'o_'+this._objectId`
+    `'o_'+this.__id__`
   end
   
   # call-seq:
@@ -613,7 +613,7 @@ class Object
   # will share an id.
   # 
   def object_id
-    `this._objectId`
+    `this.__id__`
   end
   
   # call-seq:
@@ -696,7 +696,7 @@ class Object
   # 6-digit hex memory representation.
   # 
   def to_s
-    `$q('#<'+this.m$class()._name+':0x'+(this._objectId*999^4000000).toString(16)+'>')`
+    `$q('#<'+this.m$class()._name+':0x'+(this.__id__*999^4000000).toString(16)+'>')`
   end
 end
 
@@ -1209,7 +1209,7 @@ module Comparable
   # and _other_ are the same object.
   # 
   def ==(obj)
-    `(this._objectId&&obj._objectId&&this._objectId==obj._objectId)||this.m$_ltgt(obj)==0`
+    `(this.__id__&&obj.__id__&&this.__id__==obj.__id__)||this.m$_ltgt(obj)==0`
   end
   
   # call-seq:
@@ -4006,7 +4006,7 @@ end
 # 
 class NilClass
   def initialize # :nodoc:
-    `this._objectId=4`
+    `this.__id__=4`
   end
   
   # call-seq:
@@ -6185,7 +6185,7 @@ class Symbol
   #   :foo.to_i   #=> 2019
   # 
   def to_i
-    `this._objectId`
+    `this.__id__`
   end
   
   # call-seq:
