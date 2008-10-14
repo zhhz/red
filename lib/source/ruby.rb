@@ -665,7 +665,7 @@ class Object
   #   k.send(:hello, "gentle", "readers")  #=> "Hello gentle readers"
   # 
   def send(method,*args)
-    `this[method].apply(this,args)`
+    `this['m$'+method._value.replace('=','Eql')].apply(this,args)`
   end
   
   # FIX: Incomplete
@@ -805,17 +805,20 @@ class Module
     #return other_module
   end
   
-  def attr(a, writer = false)
-    `this.prototype['m$'+a._value]=function(){return this['i$'+a._value];}`
-    `if(writer){this.prototype['m$'+a._value+'Eql']=function(x){return this['i$'+a._value]=x;};}`
+  def attr(attribute, writer = false)
+    `var a=attribute._value`
+    `f1=this.prototype['m$'+a]=function(){return this['i$'+arguments.callee._name];};f1._name=a`
+    `if(writer){f2=this.prototype['m$'+a._value+'Eql']=function(x){return this['i$'+arguments.callee._name]=x;};f2._name=a;}`
     return nil
   end
   
   def attr_accessor(*symbols)
     `for(var i=0,l=symbols.length;i<l;++i){
       var a=symbols[i]._value;
-      this.prototype['m$'+a]=function(){return this['i$'+a];};
-      this.prototype['m$'+a+'Eql']=function(x){return this['i$'+a]=x;};
+      f1=this.prototype['m$'+a]=function(){return this['i$'+arguments.callee._name];};
+      f2=this.prototype['m$'+a+'Eql']=function(x){return this['i$'+arguments.callee._name]=x;};
+      f1._name = a
+      f2._name = a
     }`
     return nil
   end
@@ -823,7 +826,8 @@ class Module
   def attr_reader(*symbols)
     `for(var i=0,l=symbols.length;i<l;++i){
       var a=symbols[i]._value;
-      this.prototype['m$'+a]=function(){return this['i$'+a];};
+      f = this.prototype['m$'+a]=function(){return this['i$'+arguments.callee._name];};
+      f._name = a
     }`
     return nil
   end
@@ -831,7 +835,8 @@ class Module
   def attr_writer(*symbols)
     `for(var i=0,l=symbols.length;i<l;++i){
       var a=symbols[i]._value;
-      this.prototype['m$'+a+'Eql']=function(x){return this['i$'+a]=x;};
+      f = this.prototype['m$'+a+'Eql']=function(x){return this['i$'+arguments.callee._name]=x;};
+      f._name = a
     }`
     return nil
   end
@@ -5004,16 +5009,36 @@ class Regexp
     Regexp.new(value,options)
   end
   
-  # FIX: Incomplete
-  def self.escape
+  # call-seq:
+  #   Regexp.escape(str) -> string
+  #   Regexp.quote(str)  -> string
+  # 
+  # Escapes any characters that would have special meaning in a regular
+  # expression. Returns a new escaped string, or _str_ if no characters are
+  # escaped. For any string, <tt>Regexp.escape(str) =~ str</tt> will be true.
+  # 
+  #   Regexp.escape('\\*?{}.')   #=> \\\\\*\?\{\}\.
+  # 
+  def self.escape(str)
+    `$q(str._value.replace(/([-.*+?^${}()|[\\]\\/\\\\])/g, '\\\\$1'))`
   end
   
   # FIX: Incomplete
   def self.last_match
   end
   
-  # FIX: Incomplete
-  def self.quote
+  # call-seq:
+  #   Regexp.escape(str) -> string
+  #   Regexp.quote(str)  -> string
+  # 
+  # Escapes any characters that would have special meaning in a regular
+  # expression. Returns a new escaped string, or _str_ if no characters are
+  # escaped. For any string, <tt>Regexp.quote(str) =~ str</tt> will be true.
+  # 
+  #   Regexp.quote('\\*?{}.')   #=> \\\\\*\?\{\}\.
+  # 
+  def self.quote(str)
+    `str._value.replace(/([-.*+?^${}()|[\\]\\/\\\\])/g, '\\\\$1')`
   end
   
   # FIX: Incomplete
@@ -6732,7 +6757,7 @@ end
 
 `
 
-c$Exception.prototype.toString=function(){var class_name=this.m$class()._name,str=class_name+': '+(this._message||class_name);m$puts(str+(this._stack!=null?'\\n        from '+this.m$backtrace().join('\\n        from '):''));return '#<'+str+'>';}
+c$Exception.prototype.toString=function(){var class_name=this.m$class()._name,str=class_name+': '+(this._message||class_name);console.log(str+(this._stack!=null?'\\n        from '+this.m$backtrace().join('\\n        from '):''));return '#<'+str+'>';}
 c$NilClass.prototype.toString=function(){return 'nil';};
 c$Range.prototype.toString=function(){return ''+this._start+(this._exclusive?'...':'..')+this._end;};
 c$Regexp.prototype.toString=function(){return '/'+this._source+'/'+(/s/.test(this._options)?'m':'')+(/i/.test(this._options)?'i':'')+(/x/.test(this._options)?'x':'');};

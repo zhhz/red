@@ -183,8 +183,10 @@ module Red # :nodoc:
   
   INTERNAL_METHODS = %w{
     []
+    []=
     <=>
     ==
+    ===
     allocate
     append_features
     backtrace
@@ -213,6 +215,7 @@ module Red # :nodoc:
     @@red_constants   = NATIVE_CONSTANTS
     @@red_methods     = INTERNAL_METHODS
     @@red_function    = nil
+    @@red_singleton   = nil
     @@red_block_arg   = nil
     @@red_import      = false
     return true

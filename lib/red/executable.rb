@@ -53,6 +53,12 @@ module Red # :nodoc:
     exit
   end
   
+  def translate_to_string_including_ruby(string)
+    js_output = hush_warnings { string.translate_to_sexp_array }.red!
+    ruby_js   = compile_ruby_js_source
+    return ruby_js + js_output
+  end
+  
   def hush_warnings
     $stderr = File.open('spew', 'w')
     output = yield

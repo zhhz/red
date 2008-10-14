@@ -12,6 +12,10 @@ To get Red working, install the rubygem.
 
   sudo gem install red
 
+=== Tutorials
+
+Find more info at Github on how to use Red: http://github.com/jessesielaff/red/wikis
+
 === Bugs / Issues
 
 Got a problem?  Tell us about it.  Submit a ticket to the project page at Lighthouse: http://jessesielaff.lighthouseapp.com/projects/15182-red

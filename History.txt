@@ -1,3 +1,22 @@
+== 4.0.3 2008-10-14
+
+* Emergency downgrade of dependency support for ParseTree.
+
+== 4.0.2 2008-10-14
+
+* 2 bug fixes:
+  * Fixed the newly introduced namespacing issue.
+  * Adjusted send, and attr and similar methods to properly cache their referred-to methods.
+
+== 4.0.1 2008-10-13
+
+* 1 major enhancement:
+  * Improved flexibility for platforming Red into browsers.
+
+* 2 bug fixes:
+  * Fixed a namespacing issue for Constants.
+  * Added a few more essential internally-referenced methods.
+
 == 4.0.0 2008-10-12
 
 * New version released.

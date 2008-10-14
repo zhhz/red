@@ -14,7 +14,7 @@ module Red
     class Constant < AssignmentNode # :nodoc:
       # [:cdecl, :Foo, {expression}]
       def initialize(constant_name_sexp, expression_sexp, options)
-        constant_name    = (@@namespace_stack + ["c$%s" % constant_name_sexp.red!]).join(".")
+        constant_name    = ("c$" + (@@namespace_stack + ["%s" % constant_name_sexp.red!]).join(".c$")).gsub("c$c$","c$")
         @@red_constants |= [constant_name]
         expression       = expression_sexp.red!(:as_assignment => true)
         self << "%s=%s" % [constant_name, expression]
@@ -81,7 +81,7 @@ module Red
           comma      = arguments.empty? ? "" : ","
           method     = (METHOD_ESCAPE[method_sexp] || method_sexp).red!
           expression = expression_sexp.red!(:as_argument => true)
-          object     = "%s.m$_brkt(%s)" % [receiver, arguments]
+          object     = "%s.m$_brac(%s)" % [receiver, arguments]
           unless string = ((method == '||' && LogicNode::Conjunction::Or::STRING) || (method == '&&' && LogicNode::Conjunction::And::STRING))
             operation = "%s.m$%s(%s)" % [object, method, expression]
           else

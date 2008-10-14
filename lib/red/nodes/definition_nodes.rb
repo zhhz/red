@@ -119,6 +119,7 @@ module Red
           function        = (METHOD_ESCAPE[function_name_sexp] || function_name_sexp).red!
           @@red_function  = function
           object          = object_sexp.is_sexp?(:self) ? @@namespace_stack.join(".") : object_sexp.red!
+          @@red_singleton = object
           singleton       = "%s.m$%s" % [object, function]
           block_sexp      = scope_sexp.assoc(:args) ? (scope_sexp << [:block, scope_sexp.delete(scope_sexp.assoc(:args)), [:nil]]).assoc(:block) : scope_sexp.assoc(:block)
           block_arg_sexp  = block_sexp.delete(block_sexp.assoc(:block_arg)) || ([:block_arg, :_block] if block_sexp.flatten.include?(:yield))
@@ -138,6 +139,7 @@ module Red
           self << "%s=function(%s){%s;}" % [singleton, arguments, contents]
           @@red_block_arg = nil
           @@red_function  = nil
+          @@red_singleton = nil
         end
       end
     end
