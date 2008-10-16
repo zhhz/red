@@ -107,7 +107,7 @@
     };
     if(typeof(block)=='function') { block.call(newClass); };
     Red.updateChildren(newClass);
-    if((typeof(c$TrueClass)!='undefined'&&newClass==c$TrueClass)||(typeof(c$FalseClass)!='undefined'&&newClass==c$FalseClass)) { Red.donateMethodsToClass(newClass.prototype,Boolean.prototype); };
+    if((typeof(c$TrueClass)!='undefined'&&newClass==c$TrueClass)||(typeof(c$FalseClass)!='undefined'&&newClass==c$FalseClass)) { Red.donateMethodsToClass(newClass.prototype,Boolean.prototype,true); };
   },
   
   LoopError: {
