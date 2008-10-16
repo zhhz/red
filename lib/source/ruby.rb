@@ -80,7 +80,7 @@
     if(typeof(block)=='function') { block.call(newModule); };
   },
   
-  class: function(longName,superclass,block){
+  class_: function(longName,superclass,block){
     var newClass,context=Red.interpretNamespace(longName),namespace=context[0],name=context[1];
     if(namespace['c$'+name]) {
       if(name!=='Object' && superclass!==namespace['c$'+name].__superclass__){m$raise(c$TypeError,$q('superclass mismatch for class '+longName));};
