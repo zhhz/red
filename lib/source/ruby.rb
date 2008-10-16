@@ -1,19 +1,135 @@
-`
-var $u=undefined,$objectId=100,nil=null,$_argTemp=undefined;
+`Red = {
+  id: 100,
+  
+  conferInheritance: function(newClass,superclass) {
+    newClass.__superclass__=superclass;
+    Red.donateMethodsToSingleton(superclass,newClass,true);
+    Red.donateMethodsToClass(superclass.prototype,newClass.prototype,true);
+    if(newClass==c$Module){delete(newClass.prototype.m$initialize);};
+    if(newClass!==Number&&newClass!==Array){newClass.prototype.toString==superclass.prototype.toString;};
+  },
+  
+  donateMethodsToSingleton: function(donor,recipient,overwrite) {
+    for(var x in donor) {
+      if(x.slice(0,2)==='m$' && (overwrite || recipient[x]===undefined)) {
+        var f = function() { var m=arguments.callee;return m.__methodSource__[m.__methodName__].apply(m.__methodReceiver__,arguments); };
+        f.__methodName__=x;f.__methodSource__=donor;f.__methodReceiver__=recipient;
+        recipient[x]=f;
+      };
+    };
+  },
+  
+  donateMethodsToClass: function(donor,recipient,overwrite) {
+    for(var x in donor) {
+      if(x.slice(0,2)==='m$' && (overwrite || recipient[x]===undefined)) {
+        var f = function() { var m=arguments.callee;return m.__methodSource__[m.__methodName__].apply(this,arguments); };
+        f.__methodName__=x;f.__methodSource__=donor;
+        recipient[x]=f;
+      };
+    };
+  },
+  
+  updateChildren: function(parentClass) {
+    for(var x in parentClass.__children__) {
+      var childClass=Red.inferConstantFromString(x);
+      Red.donateMethodsToSingleton(parentClass,childClass,false);
+      Red.donateMethodsToClass(parentClass.prototype,childClass.prototype,false);
+      Red.updateChildren(childClass);
+    };
+  },
+  
+  updateIncluders: function(module) {
+    for(var x in module.__includers__) {
+      var includer=Red.inferConstantFromString(x);
+      Red.donateMethodsToSingleton(module,includer,false);
+      Red.donateMethodsToClass(module.prototype,includer.prototype,false);
+      switch(includer.m$class().__name__){case 'Module':Red.updateIncluders(includer);break;case 'Class':Red.updateChildren(includer);break;};
+    };
+  },
+  
+  initializeClass: function(longName,newClass) {
+    newClass.__name__ = longName;
+    newClass.__id__ = Red.id++;
+    newClass.__modules__ = {};
+    newClass.__children__ = {};
+    newClass.prototype.__class__=newClass;
+    Red.donateMethodsToSingleton(c$Class.prototype,newClass,true)
+  },
+  
+  interpretNamespace: function(longName) {
+    var ary=longName.split('.'),name=ary.pop(),namespace=window;
+    while(ary.length>0){namespace=namespace['c$'+ary.shift()];};
+    return [namespace,name];
+  },
+  
+  inferConstantFromString: function(longName) {
+    if(longName=='window'){return window;}
+    var context=Red.interpretNamespace(longName);
+    return context[0]['c$'+context[1]];
+  },
+  
+  module: function(longName,block){
+    var newModule,context=Red.interpretNamespace(longName),namespace=context[0],name=context[1];
+    if(namespace['c$'+name]) {
+      newModule = namespace['c$'+name];
+    } else {
+      newModule = c$Module.m$new(longName);
+      namespace['c$'+name] = newModule;
+      newModule.__includers__={};
+    };
+    if(typeof(block)=='function') { block.call(newModule); };
+  },
+  
+  class: function(longName,superclass,block){
+    var newClass,context=Red.interpretNamespace(longName),namespace=context[0],name=context[1];
+    if(namespace['c$'+name]) {
+      if(name!=='Object' && superclass!==namespace['c$'+name].__superclass__){m$raise(c$TypeError,$q('superclass mismatch for class '+longName));};
+      newClass = namespace['c$'+name];
+      if(name=='Module'&&!(newClass.__superclass__.__children__[name])){Red.conferInheritance(c$Module,c$Object);}
+      if(name=='Class'&&!(newClass.__superclass__.__children__[name])){Red.conferInheritance(c$Class,c$Module);}
+    } else {
+      switch(name){
+        case 'Array':newClass=Array;break;case 'Numeric':newClass=Number;break;
+        default: newClass = function() { this.__id__ = Red.id++ };
+      };
+      Red.conferInheritance(newClass,superclass);
+      Red.initializeClass(longName,newClass);
+      superclass.__children__[newClass.__name__]=true;
+      superclass.m$inherited && superclass.m$inherited(newClass);
+      namespace['c$'+name] = newClass;
+    };
+    if(name == 'Object' || superclass == c$Object){
+      newClass.cvset = function(var_name,object) { return newClass['v$'+var_name] = object; };
+      newClass.cvget = function(var_name)        { return newClass['v$'+var_name]; };
+    } else {
+      newClass.cvset = function() { return superclass.cvset.apply(null,arguments); };
+      newClass.cvget = function() { return superclass.cvget.apply(null,arguments); };
+    };
+    if(typeof(block)=='function') { block.call(newClass); };
+    Red.updateChildren(newClass);
+    if((typeof(c$TrueClass)!='undefined'&&newClass==c$TrueClass)||(typeof(c$FalseClass)!='undefined'&&newClass==c$FalseClass)) { Red.donateMethodsToClass(newClass.prototype,Boolean.prototype); };
+  },
+  
+  LoopError: {
+    break:function(value){var e=new(Error);e.__keyword__='break';e._value=value==null?nil:value;throw(e);},
+    next:function(value){var e=new(Error);e.__keyword__='next';e._value=value==null?nil:value;throw(e);},
+    redo:function(){var e=new(Error);e.__keyword__='redo';throw(e);},
+    isA:function(e,ary){for(var i=0,l=ary.length;i<l;++i){if(e.m$isABool(ary[i])){return true;};};return false;}
+  }
+};
 
-function $break(value){var e=new(Error);e._name='break';e._value=value==null?nil:value;throw(e);};
-function $next(value){var e=new(Error);e._name='next';e._value=value==null?nil:value;throw(e);};
-function $redo(){var e=new(Error);e._name='redo';throw(e);};
-function $return(value){var e=new(Error);e._name='return';e._value=value==null?nil:value;throw(e);};
-function $eType(e,ary){for(var i=0,l=ary.length;i<l;++i){if(e.m$isABool(ary[i])){return true;};};return false;};
+var $u=undefined,nil=null;
 
-c$Object = function(){this._objectId=$objectId++};
-c$Module = function(){this._objectId=$objectId++};
-c$Class  = function(){this._objectId=$objectId++};
+c$Class  = function(){this.__id__=Red.id++};c$Class.__name__='Class';c$Class.__children__={};
+c$Module = function(){this.__id__=Red.id++};c$Module.__name__='Module';c$Module.__children__={};c$Class.__superclass__=c$Module;
+c$Object = function(){this.__id__=Red.id++};c$Object.__name__='Object';c$Object.__children__={};c$Module.__superclass__=c$Object;
 
-c$Object.prototype.toString=function(){return '#<'+this.m$class()._name+':0x'+(this._objectId*999^4000000).toString(16)+'>'};
-Function.prototype.m$=function(o){var f=this;var p=function(){return f.apply(o,arguments);};p._arity=f.arity;p._objectId=$objectId++;return p;};
-window.m$include=function(){for(var i=0,modules=arguments,l=modules.length;i<l;++i){var mp=modules[i].prototype;for(var x in mp){if(x.slice(0,2)=='m$'){var f=function(){return arguments.callee._source[arguments.callee._name].apply(window,arguments) };f._source=mp;f._name=x;window[x]=f;};};modules[i].m$included(window);};return window;};
+c$Object.prototype.toString=function(){return '#<'+this.m$class().__name__.replace(/\\./g,'::')+':0x'+(this.__id__*999^4000000).toString(16)+'>'};
+Function.prototype.m$=function(o){var f=this;var p=function(){return f.apply(o,arguments);};p._arity=f.arity;p.__id__=Red.id++;return p;};
+window.__name__='window';
+window.prototype=window;
+window.__children__={'Object':true};
+window.m$include=function(){for(var i=0,modules=arguments,l=modules.length;i<l;++i){var mp=modules[i].prototype;for(var x in mp){if(x.slice(0,2)=='m$'){var f=function(){return arguments.callee._source[arguments.callee._name].apply(window,arguments) };f._source=mp;f._name=x;window[x]=f;};};modules[i].m$included(window);modules[i].__includers__['window']=true;};if(modules[0]!=c$Kernel){Red.donateMethodsToClass(window,c$Object.prototype);Red.updateChildren(c$Object);};return window;};
 window.m$blockGivenBool=function(){typeof(arguments[0])=='function'}
 
 function $Q(){for(var i=1,s=arguments[0],l=arguments.length;i<l;++i){s+=$q(arguments[i]).m$toS()._value;};return $q(s);};
@@ -22,98 +138,6 @@ function $r(value,options){return c$Regexp.m$new(value,options);};
 function $s(value){return(c$Symbol._table[value]||c$Symbol.m$new(value));};
 function $T(x){return x!==false&&x!==nil&&x!=undefined;};
 
-function $inheritance(newClass,superclass) {
-  newClass._superclass = superclass;
-  for(var x in superclass) {
-    if(x.slice(0,2)==='m$' && x!=='m$class') {
-      var f = function() { return arguments.callee._source[arguments.callee._name].apply(newClass,arguments) };
-      f._source = superclass;
-      f._name = x
-      newClass[x] = f;
-    };
-  };
-  var sp=superclass.prototype,np=newClass.prototype;
-  for(var x in sp) {
-    if(x.slice(0,2)==='m$' && !(x=='m$initialize' && newClass==c$Module) && x!=='m$class' || (x=='toString'&&newClass!==Number&&newClass!==Array)) {
-      var f = function() { return arguments.callee._source[''+arguments.callee._name].apply(this,arguments) };
-      f._source = sp;
-      f._name = x;
-      np[x] = f;
-    };
-  };
-};
-
-function $classlike(name,newClass) {
-  newClass._name = name;
-  newClass._objectId = $objectId++;
-  newClass._modules = {};
-  for(var x in c$Class.prototype) {
-    if(x.slice(0,2)==='m$' && !(newClass == c$Class && x==='m$new')) {
-      var f = function() { return c$Class.prototype[arguments.callee._name].apply(newClass,arguments) };
-      f._name = x;
-      newClass[x] = f;
-    };
-  };
-};
-
-function $booleanClass(newClass) {
-  for(var x in newClass.prototype){
-    if(x.slice(0,2)==='m$'){
-      var f=function(){return arguments.callee._source[arguments.callee._name].apply(this,arguments)};
-      f._source=newClass.prototype;
-      f._name=x;
-      Boolean.prototype[x]=f;
-    };
-  };
-}
-
-function $context(name){
-  var ary=name.split('.'),name=ary.pop(),namespace=window;
-  while(ary.length>0){
-    namespace=namespace['c$'+ary.shift()]
-  };
-  return [namespace,name];
-};
-
-function $module(name,block){
-  var newModule,context=$context(name),namespace=context[0],name=context[1];
-  if(namespace['c$'+name]) {
-    newModule = namespace['c$'+name];
-  } else {
-    newModule = c$Module.m$new(name);
-    namespace['c$'+name] = newModule;
-  };
-  if(typeof(block)=='function') { block.call(namespace['c$'+name]); };
-};
-
-function $class(name,superclass,block){
-  var newClass,context=$context(name),namespace=context[0],name=context[1];
-  if(namespace['c$'+name]) {
-    if(name !== 'Object' && name !== 'Class' && name !== 'Module' && superclass !== namespace['c$'+name]._superclass){throw('TypeError: superclass mismatch for class '+name);};
-    newClass = namespace['c$'+name];
-    if(name=='Module'){$inheritance(c$Module,c$Object);}
-    if(name=='Class'){$inheritance(c$Class,c$Module);}
-  } else {
-    switch(name){
-      case 'Array':newClass=Array;break;case 'Numeric':newClass=Number;break;
-      default: newClass = function() { this._objectId = $objectId++ };
-    };
-    $inheritance(newClass,superclass);
-    $classlike(name,newClass);
-    superclass.m$inherited && superclass.m$inherited(newClass);
-    namespace['c$'+name] = newClass;
-  };
-  if(name == 'Object' || superclass == c$Object){
-    newClass.cvset = function(var_name,object) { return newClass['v$'+var_name] = object; };
-    newClass.cvget = function(var_name)        { return newClass['v$'+var_name]; };
-  } else {
-    newClass.cvset = function() { return superclass.cvset.apply(null,arguments); };
-    newClass.cvget = function() { return superclass.cvget.apply(null,arguments); };
-  };
-  newClass.prototype.m$class = function() { return newClass; };
-  if(typeof(block)=='function') { block.call(namespace['c$'+name]); };
-  if((typeof(c$TrueClass)!='undefined'&&newClass==c$TrueClass)||(typeof(c$FalseClass)!='undefined'&&newClass==c$FalseClass)) { $booleanClass(newClass); };
-}
 `
 
 # +Object+ is the parent class of all classes in Red. Its methods are
@@ -145,7 +169,7 @@ class Object
   # may override this behavior.
   # 
   def ==(other)
-    `this._objectId==other._objectId`
+    `this.__id__==other.__id__`
   end
   
   # call-seq:
@@ -156,7 +180,7 @@ class Object
   # semantics in case statements.
   # 
   def ===(other)
-    `this._objectId==other._objectId`
+    `this.__id__==other.__id__`
   end
   
   # call-seq:
@@ -178,7 +202,7 @@ class Object
   # will share an id.
   # 
   def __id__
-    `this._objectId`
+    `this.__id__`
   end
   
   # call-seq:
@@ -212,7 +236,7 @@ class Object
   #   self.class    #=> Object
   # 
   def class
-    return `c$Object`
+    `this.__class__`
   end
   
   # call-seq:
@@ -238,8 +262,8 @@ class Object
   # 
   def clone
     `var result={}`
-    `for(var x in this){if(x!='_objectId'){result[x]=this[x];};}`
-    `result._objectId=$objectId++`
+    `for(var x in this){if(x!='__id__'){result[x]=this[x];};}`
+    `result.__id__=Red.id++`
     return `result`
   end
   
@@ -258,8 +282,8 @@ class Object
   # 
   def dup
     `var result=this.m$class.m$new()`
-    `for(var x in this){if(x!='_objectId'&&x.slice(0,2)!='i$'){result[x]=this[x];};}`
-    `result._objectId=$objectId++`
+    `for(var x in this){if(x!='__id__'&&x.slice(0,2)!='i$'){result[x]=this[x];};}`
+    `result.__id__=Red.id++`
     return `result`
   end
   
@@ -286,7 +310,7 @@ class Object
   # may override this behavior.
   # 
   def eql?(other)
-    `this._objectId==other._objectId`
+    `this.__id__==other.__id__`
   end
   
   # call-seq:
@@ -308,7 +332,7 @@ class Object
   # may override this behavior.
   # 
   def equal?(other)
-    `this._objectId==other._objectId`
+    `this.__id__==other.__id__`
   end
   
   # call-seq:
@@ -350,7 +374,7 @@ class Object
   # <tt>a.hash == b.hash</tt>, and is typically overridden in child classes.
   # 
   def hash
-    `'o_'+this._objectId`
+    `'o_'+this.__id__`
   end
   
   # call-seq:
@@ -506,7 +530,7 @@ class Object
     `if(this.m$class()._modules[klass]){return true;}`            # true if klass is included in obj's class
     `if(this.m$class()==c$Object){return false;}`               # false if module check fails and obj is Object
     `var bubble=this.m$class(),result=false`
-    `while(bubble!=c$Object){if(klass==bubble||bubble._modules[klass]!=null){result=true;};if(result){break;};bubble=bubble._superclass;}`
+    `while(bubble!=c$Object){if(klass==bubble||bubble._modules[klass]!=null){result=true;};if(result){break;};bubble=bubble.__superclass__;}`
     return `result`
   end
   
@@ -539,7 +563,7 @@ class Object
     `if(this.m$class()._modules[klass]){return true;}`            # true if klass is included in obj's class
     `if(this.m$class()==c$Object){return false;}`               # false if module check fails and obj is Object
     `var bubble=this.m$class(),result=false`
-    `while(bubble!=c$Object){if(klass==bubble||bubble._modules[klass]!=null){result=true;};if(result){break;};bubble=bubble._superclass;}`
+    `while(bubble!=c$Object){if(klass==bubble||bubble._modules[klass]!=null){result=true;};if(result){break;};bubble=bubble.__superclass__;}`
     return `result`
   end
   
@@ -613,7 +637,7 @@ class Object
   # will share an id.
   # 
   def object_id
-    `this._objectId`
+    `this.__id__`
   end
   
   # call-seq:
@@ -696,7 +720,7 @@ class Object
   # 6-digit hex memory representation.
   # 
   def to_s
-    `$q('#<'+this.m$class()._name+':0x'+(this._objectId*999^4000000).toString(16)+'>')`
+    `$q('#<'+this.m$class().__name__.replace(/\\./g,'::')+':0x'+(this.__id__*999^4000000).toString(16)+'>')`
   end
 end
 
@@ -749,7 +773,7 @@ class Module
   #   a.say_bye          #=> "goodbye"
   # 
   def initialize(module_name, &block)
-    `this._name=moduleName._value||moduleName`
+    `this.__name__=moduleName._value||moduleName`
     `this.prototype={}`
   end
   
@@ -789,20 +813,9 @@ class Module
   # FIX: Incomplete
   def append_features(mod)
     `var tp=this.prototype,mp=mod.prototype`
-    `for(var x in tp){
-      if(x.slice(0,2)=='m$'){
-        var f=function(){return arguments.callee._source[arguments.callee._name].apply(this,arguments) };
-        f._source=tp;
-        f._name=x;
-        mp[x]=f;
-      };
-    }`
+    `Red.donateMethodsToSingleton(mod,this)`
+    `Red.donateMethodsToClass(mod.prototype,this.prototype)`
     return `mod`
-    
-    
-    #`for(x in this.prototype){#{other_module}.prototype[x]=this.prototype[x];}`
-    #`for(#{x} in #{self}){if(x.slice(0,2)=='');}` # FIGURE THIS OUT
-    #return other_module
   end
   
   def attr(attribute, writer = false)
@@ -815,10 +828,8 @@ class Module
   def attr_accessor(*symbols)
     `for(var i=0,l=symbols.length;i<l;++i){
       var a=symbols[i]._value;
-      f1=this.prototype['m$'+a]=function(){return this['i$'+arguments.callee._name];};
-      f2=this.prototype['m$'+a+'Eql']=function(x){return this['i$'+arguments.callee._name]=x;};
-      f1._name = a
-      f2._name = a
+      f1=this.prototype['m$'+a]=function(){return this['i$'+arguments.callee._name];};f1._name=a;
+      f2=this.prototype['m$'+a+'Eql']=function(x){return this['i$'+arguments.callee._name]=x;};f2._name=a;
     }`
     return nil
   end
@@ -826,8 +837,7 @@ class Module
   def attr_reader(*symbols)
     `for(var i=0,l=symbols.length;i<l;++i){
       var a=symbols[i]._value;
-      f = this.prototype['m$'+a]=function(){return this['i$'+arguments.callee._name];};
-      f._name = a
+      f=this.prototype['m$'+a]=function(){return this['i$'+arguments.callee._name];};f._name=a;
     }`
     return nil
   end
@@ -835,8 +845,7 @@ class Module
   def attr_writer(*symbols)
     `for(var i=0,l=symbols.length;i<l;++i){
       var a=symbols[i]._value;
-      f = this.prototype['m$'+a+'Eql']=function(x){return this['i$'+arguments.callee._name]=x;};
-      f._name = a
+      f=this.prototype['m$'+a+'Eql']=function(x){return this['i$'+arguments.callee._name]=x;};f._name=a;
     }`
     return nil
   end
@@ -898,11 +907,11 @@ class Module
   #   Picky won't give its methods to a String
   # 
   def extend_object(obj)
-    `for(var x in this.prototype){
+    `var tp=this.prototype`
+    `for(var x in tp){
       if(x.slice(0,2)=='m$'){
-        var f=function(){return arguments.callee._source[arguments.callee._name].apply(obj,arguments) };
-        f._source=this.prototype;
-        f._name=x;
+        var f=function(){var m=arguments.callee;return m.__methodSource__[m.__methodName__].apply(m.__methodReceiver__,arguments) };
+        f.__methodName__=x;f.__methodSource__=tp;f.__methodReceiver__=obj;
         obj[x]=f;
       };
     }`
@@ -961,7 +970,7 @@ class Module
   #   k.hello         #=> "Hello from Mod"
   # 
   def include(*modules)
-    `for(var i=0,l=modules.length;i<l;++i){modules[i].m$appendFeatures(this);modules[i].m$included(this);}`
+    `for(var i=0,l=modules.length;i<l;++i){var mod=modules[i];mod.m$appendFeatures(this);mod.m$included(this);mod.__includers__[this.__name__]=true;}`
     return self
   end
   
@@ -1008,7 +1017,7 @@ class Module
   end
   
   def name
-    `$q(this._name)`
+    `$q(this.__name__.replace(/\\./g,'::'))`
   end
   
   def remove_class_variable(sym)
@@ -1022,7 +1031,7 @@ class Module
   
   # Return a string representing this module or class.
   def to_s
-    `$q(this._name)`
+    `$q(this.__name__.replace(/\\./g,'::'))`
   end
 end
 
@@ -1056,14 +1065,14 @@ class Class < Module
   # call-seq:
   #   Class.new(class_name, superclass = Object) -> class
   # 
-  # Creates a new class with the given _superclass_ (or +Object+ if no
+  # Creates a new class with the given __superclass___ (or +Object+ if no
   # superclass is given). Unlike in Ruby, where you need only assign the
   # class object to a constant in order to give it a name, in Red you must
   # also pass the class name as a string argument.
   # 
   # FIX: Incomplete
   def self.new(class_name, superclass = Object)
-    `$class(className._value,superclass,function(){})`
+    `Red.class(className._value,superclass,function(){})`
     return `window['c$'+className._value]`
   end
   
@@ -1139,14 +1148,14 @@ class Class < Module
   #   Object.superclass   #=> nil
   # 
   def superclass
-    `this._superclass`
+    `this.__superclass__`
   end
 end
 
 `
-$classlike('Object',c$Object);
-$classlike('Module',c$Module);
-$classlike('Class',c$Class)
+Red.initializeClass('Object',c$Object);c$Object.__children__={'Module':true};
+Red.initializeClass('Module',c$Module);c$Module.__children__={'Class':true};
+Red.initializeClass('Class',c$Class)
 `
 
 # The +Comparable+ mixin is used by classes whose objects may be ordered. The
@@ -1214,7 +1223,7 @@ module Comparable
   # and _other_ are the same object.
   # 
   def ==(obj)
-    `(this._objectId&&obj._objectId&&this._objectId==obj._objectId)||this.m$_ltgt(obj)==0`
+    `(this.__id__&&obj.__id__&&this.__id__==obj.__id__)||this.m$_ltgt(obj)==0`
   end
   
   # call-seq:
@@ -1967,7 +1976,7 @@ class Array
   #   a                           #=> [1, 2, 3, 4]
   # 
   def collect
-    `for(var i=0,l=this.length,result=[];i<l;++i){try{result[i]=#{yield `this[i]`};}catch(e){switch(e._name){case 'next':result[i]=e._value;break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length,result=[];i<l;++i){try{result[i]=#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':result[i]=e._value;break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
     return `result`
   end
   
@@ -1985,7 +1994,7 @@ class Array
   #   a.collect! {|x| x + 100 }   #=> [201, 202, 203, 204]
   # 
   def collect!
-    `for(var i=0,l=this.length;i<l;++i){try{this[i]=#{yield `this[i]`};}catch(e){switch(e._name){case 'next':this[i]=e._value;break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length;i<l;++i){try{this[i]=#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':this[i]=e._value;break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
     return self
   end
   
@@ -2084,7 +2093,7 @@ class Array
   #   a.delete_if {|element| element >= 'b' }   #=> ["a"]
   # 
   def delete_if
-    `for(var temp=[],i=0,l=this.length;i<l;++i){try{if(!$T(#{yield `this[i]`})){temp.push(this[i]);};}catch(e){switch(e._name){case 'next':if(!$T(e._value)){temp.push(this[i]);};break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var temp=[],i=0,l=this.length;i<l;++i){try{if(!$T(#{yield `this[i]`})){temp.push(this[i]);};}catch(e){switch(e.__keyword__){case 'next':if(!$T(e._value)){temp.push(this[i]);};break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
     `this._replace(temp)`
   end
   
@@ -2102,7 +2111,7 @@ class Array
   #   C
   # 
   def each
-    `for(var i=0,l=this.length;i<l;++i){try{#{yield `this[i]`};}catch(e){switch(e._name){case 'next':break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length;i<l;++i){try{#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
     return self
   end
   
@@ -2120,7 +2129,7 @@ class Array
   #   102
   # 
   def each_index
-    `for(var i=0,l=this.length;i<l;++i){try{#{yield `i`};}catch(e){switch(e._name){case 'next':break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length;i<l;++i){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
     return self
   end
   
@@ -2388,7 +2397,7 @@ class Array
   #   a                       #=> [1, 2, 3, 4]
   # 
   def map
-    `for(var i=0,l=this.length,result=[];i<l;++i){try{result[i]=#{yield `this[i]`};}catch(e){switch(e._name){case 'next':result[i]=e._value;break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length,result=[];i<l;++i){try{result[i]=#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':result[i]=e._value;break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
     return `result`
   end
   
@@ -2406,7 +2415,7 @@ class Array
   #   a.map! {|x| x + 100 }   #=> [201, 202, 203, 204]
   # 
   def map!
-    `for(var i=0,l=this.length;i<l;++i){try{this[i]=#{yield `this[i]`};}catch(e){switch(e._name){case 'next':this[i]=e._value;break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length;i<l;++i){try{this[i]=#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':this[i]=e._value;break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
     return self
   end
   
@@ -2484,7 +2493,7 @@ class Array
   #   a                       #=> [1, 2, 3, 4, 5]
   # 
   def reject
-    `for(var i=0,l=this.length,result=[];i<l;++i){try{if(!$T(#{yield `this[i]`})){result.push(this[i]);};}catch(e){switch(e._name){case 'next':if(!$T(e._value)){result.push(this[i]);};break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length,result=[];i<l;++i){try{if(!$T(#{yield `this[i]`})){result.push(this[i]);};}catch(e){switch(e.__keyword__){case 'next':if(!$T(e._value)){result.push(this[i]);};break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
     return `result`
   end
   
@@ -2501,7 +2510,7 @@ class Array
   #   a                         #=> [1, 2, 3]
   # 
   def reject!
-    `for(var i=0,l=this.length,temp=[];i<l;++i){try{if(!$T(#{yield `this[i]`})){temp.push(this[i]);};}catch(e){switch(e._name){case 'next':if(!$T(e._value)){temp.push(this[i]);};break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length,temp=[];i<l;++i){try{if(!$T(#{yield `this[i]`})){temp.push(this[i]);};}catch(e){switch(e.__keyword__){case 'next':if(!$T(e._value)){temp.push(this[i]);};break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
     return `temp.length==l?nil:this._replace(temp)`
   end
   
@@ -2564,7 +2573,7 @@ class Array
   #   A
   # 
   def reverse_each
-    `for(var i=this.length;i>0;){try{#{yield `this[--i]`};}catch(e){switch(e._name){case 'next':break;case 'break':return e._value;break;case 'redo':++i;break;default:throw(e);};};}`
+    `for(var i=this.length;i>0;){try{#{yield `this[--i]`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':++i;break;default:throw(e);};};}`
     return self
   end
   
@@ -2593,7 +2602,7 @@ class Array
   #   [1,2,3,4,5].select {|x| x > 3 }   #=> [4, 5]
   # 
   def select
-    `for(var i=0,l=this.length,result=[];i<l;++i){try{if($T(#{yield `this[i]`})){result.push(this[i]);};}catch(e){switch(e._name){case 'next':if($T(e._value)){result.push(this[i]);};break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length,result=[];i<l;++i){try{if($T(#{yield `this[i]`})){result.push(this[i]);};}catch(e){switch(e.__keyword__){case 'next':if($T(e._value)){result.push(this[i]);};break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
     return `result`
   end
   
@@ -2730,7 +2739,7 @@ class Array
   #   [1,2,3].to_a    #=> [1, 2, 3]
   # 
   def to_a
-    `if(self.m$class()==c$Array){return this;}`
+    `if(this.m$class()==c$Array){return this;}`
     return `c$Array.apply(nil,this)`
   end
   
@@ -2888,7 +2897,7 @@ class Exception
   # Returns _exc_'s class name and message.
   # 
   def inspect
-    `var class_name=this.m$class()._name`
+    `var class_name=this.m$class().__name__.replace(/\\./g,'::')`
     `this._message==''?$q(class_name):$q('#<'+class_name+': '+(this._message||class_name)+'>')`
   end
   
@@ -2901,7 +2910,7 @@ class Exception
   # is set).
   # 
   def message
-    `this._message==null?$q(this.m$class()._name):$q(this._message)`
+    `this._message==null?$q(this.m$class().__name__.replace(/\\./g,'::')):$q(this._message)`
   end
   
   # call-seq:
@@ -2925,7 +2934,7 @@ class Exception
   # is set).
   # 
   def to_s
-    `this._message==null?$q(this.m$class()._name):$q(this._message)`
+    `this._message==null?$q(this.m$class().__name__.replace(/\\./g,'::')):$q(this._message)`
   end
   
   # call-seq:
@@ -2937,7 +2946,7 @@ class Exception
   # is set).
   # 
   def to_str
-    `this._message==null?$q(this.m$class()._name):$q(this._message)`
+    `this._message==null?$q(this.m$class().__name__.replace(/\\./g,'::')):$q(this._message)`
   end
 end
 
@@ -3243,7 +3252,7 @@ class Hash
   # 
   def delete_if
     `var c=this._contents`
-    `for(var x in c){try{if(x.slice(1,2)=='_'&&$T(#{yield(`c[x][0]`,`c[x][1]`)})){delete(c[x]);};}catch(e){switch(e._name){case 'next':if($T(e._value)){delete(c[x]);};break;case 'break':return e._value;break;default:throw(e);};};}`
+    `for(var x in c){try{if(x.slice(1,2)=='_'&&$T(#{yield(`c[x][0]`,`c[x][1]`)})){delete(c[x]);};}catch(e){switch(e.__keyword__){case 'next':if($T(e._value)){delete(c[x]);};break;case 'break':return e._value;break;default:throw(e);};};}`
     return self
   end
   
@@ -3270,7 +3279,7 @@ class Hash
   # 
   def each
     `var c=this._contents`
-    `for(var x in c){try{if(x.slice(1,2)=='_'){var kv=c[x];_block._arity==1?#{yield(`[kv[0],kv[1]]`)}:#{yield(`kv[0],kv[1]`)}};}catch(e){switch(e._name){case 'next':;break;case 'break':return e._value;break;default:throw(e);};};}`
+    `for(var x in c){try{if(x.slice(1,2)=='_'){var kv=c[x];_block._arity==1?#{yield(`[kv[0],kv[1]]`)}:#{yield(`kv[0],kv[1]`)}};}catch(e){switch(e.__keyword__){case 'next':;break;case 'break':return e._value;break;default:throw(e);};};}`
     return self
   end
   
@@ -3290,7 +3299,7 @@ class Hash
   # 
   def each_key
     `var c=this._contents`
-    `for(var x in c){try{if(x.slice(1,2)=='_'){#{yield `c[x][0]`}};}catch(e){switch(e._name){case 'next':;break;case 'break':return e._value;break;default:throw(e);};};}`
+    `for(var x in c){try{if(x.slice(1,2)=='_'){#{yield `c[x][0]`}};}catch(e){switch(e.__keyword__){case 'next':;break;case 'break':return e._value;break;default:throw(e);};};}`
     return self
   end
   
@@ -3311,7 +3320,7 @@ class Hash
   # 
   def each_pair
     `var c=this._contents`
-    `for(var x in c){try{if(x.slice(1,2)=='_'){var kv=c[x];#{yield(`kv[0]`,`kv[1]`)}};}catch(e){switch(e._name){case 'next':;break;case 'break':return e._value;break;default:throw(e);};};}`
+    `for(var x in c){try{if(x.slice(1,2)=='_'){var kv=c[x];#{yield(`kv[0]`,`kv[1]`)}};}catch(e){switch(e.__keyword__){case 'next':;break;case 'break':return e._value;break;default:throw(e);};};}`
     return self
   end
   
@@ -3332,7 +3341,7 @@ class Hash
   # 
   def each_value
     `var c=this._contents`
-    `for(var x in c){try{if(x.slice(1,2)=='_'){#{yield `c[x][1]`}};}catch(e){switch(e._name){case 'next':;break;case 'break':return e._value;break;default:throw(e);};};}`
+    `for(var x in c){try{if(x.slice(1,2)=='_'){#{yield `c[x][1]`}};}catch(e){switch(e.__keyword__){case 'next':;break;case 'break':return e._value;break;default:throw(e);};};}`
     return self
   end
   
@@ -3597,7 +3606,7 @@ class Hash
   # 
   def reject
     `var c=this._contents,result=c$Hash.m$new()`
-    `for(var x in c){try{var kv=c[x];if(x.slice(1,2)=='_'&&!$T(#{yield(`kv[0]`,`kv[1]`)})){result._contents[x]=kv;};}catch(e){switch(e._name){case 'next':if(!$T(e._value)){result._contents[x]=kv;};break;case 'break':return e._value;break;default:throw(e);};};}`
+    `for(var x in c){try{var kv=c[x];if(x.slice(1,2)=='_'&&!$T(#{yield(`kv[0]`,`kv[1]`)})){result._contents[x]=kv;};}catch(e){switch(e.__keyword__){case 'next':if(!$T(e._value)){result._contents[x]=kv;};break;case 'break':return e._value;break;default:throw(e);};};}`
     return `result`
   end
   
@@ -3616,7 +3625,7 @@ class Hash
   # 
   def reject!
     `var c=this._contents,u=true`
-    `for(var x in c){try{var kv=c[x];if(x.slice(1,2)=='_'&&$T(#{yield(`kv[0]`,`kv[1]`)})){u=false;delete(c[x]);};}catch(e){switch(e._name){case 'next':if($T(e._value)){u=false;delete(c[x]);};break;case 'break':return e._value;break;default:throw(e);};};}`
+    `for(var x in c){try{var kv=c[x];if(x.slice(1,2)=='_'&&$T(#{yield(`kv[0]`,`kv[1]`)})){u=false;delete(c[x]);};}catch(e){switch(e.__keyword__){case 'next':if($T(e._value)){u=false;delete(c[x]);};break;case 'break':return e._value;break;default:throw(e);};};}`
     return `u?nil:this`
   end
   
@@ -3650,7 +3659,7 @@ class Hash
   # 
   def select
     `var c=this._contents,result=[]`
-    `for(var x in c){try{var kv=c[x];if(x.slice(1,2)=='_'&&$T(#{yield(`kv[0]`,`kv[1]`)})){result.push(kv);};}catch(e){switch(e._name){case 'next':if($T(e._value)){result.push(kv);};break;case 'break':return e._value;break;default:throw(e);};};}`
+    `for(var x in c){try{var kv=c[x];if(x.slice(1,2)=='_'&&$T(#{yield(`kv[0]`,`kv[1]`)})){result.push(kv);};}catch(e){switch(e.__keyword__){case 'next':if($T(e._value)){result.push(kv);};break;case 'break':return e._value;break;default:throw(e);};};}`
     return `result`
   end
   
@@ -4011,7 +4020,7 @@ end
 # 
 class NilClass
   def initialize # :nodoc:
-    `this._objectId=4`
+    `this.__id__=4`
   end
   
   # call-seq:
@@ -4096,7 +4105,7 @@ class NilClass
   end
   
   `nil=c$NilClass.m$new()`
-  `c$Object._superclass=nil`
+  `c$Object.__superclass__=nil`
   
   undef initialize
 end
@@ -4364,7 +4373,7 @@ class Numeric
   #   1..
   # 
   def downto(limit)
-    `for(var i=this.valueOf();i>=limit;--i){try{#{yield `i`};}catch(e){switch(e._name){case 'next':break;case 'break':return e._value;break;case 'redo':++i;break;default:throw(e);};};}`
+    `for(var i=this.valueOf();i>=limit;--i){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':++i;break;default:throw(e);};};}`
     return self
   end
   
@@ -4524,7 +4533,7 @@ class Numeric
   # 
   def step(limit, step)
     `var i=this.valueOf()`
-    `if(step>0){if(i<limit){for(;limit>=i;i+=step){try{#{yield `i`};}catch(e){switch(e._name){case 'next':break;case 'break':return e._value;break;case 'redo':i-=step;break;default:throw(e);};};};};}else{if(i>limit){for(;limit<=i;i+=step){try{#{yield `i`};}catch(e){switch(e._name){case 'next':break;case 'break':return e._value;break;case 'redo':i-=step;break;default:throw(e);};}};;};}`
+    `if(step>0){if(i<limit){for(;limit>=i;i+=step){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':i-=step;break;default:throw(e);};};};};}else{if(i>limit){for(;limit<=i;i+=step){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':i-=step;break;default:throw(e);};}};;};}`
     return self
   end
   
@@ -4561,7 +4570,7 @@ class Numeric
   #   4
   # 
   def times
-    `for(var i=0,l=this.valueOf();i<l;++i){try{#{yield `i`};}catch(e){switch(e._name){case 'next':break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};}}`
+    `for(var i=0,l=this.valueOf();i<l;++i){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};}}`
     return self
   end
   
@@ -4643,7 +4652,7 @@ class Numeric
   #   100..
   # 
   def upto(limit)
-    `for(var i=this.valueOf();i<=limit;++i){try{#{yield `i`};}catch(e){switch(e._name){case 'next':break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=this.valueOf();i<=limit;++i){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
     return self
   end
   
@@ -6210,7 +6219,7 @@ class Symbol
   #   :foo.to_i   #=> 2019
   # 
   def to_i
-    `this._objectId`
+    `this.__id__`
   end
   
   # call-seq:
@@ -6757,7 +6766,7 @@ end
 
 `
 
-c$Exception.prototype.toString=function(){var class_name=this.m$class()._name,str=class_name+': '+(this._message||class_name);console.log(str+(this._stack!=null?'\\n        from '+this.m$backtrace().join('\\n        from '):''));return '#<'+str+'>';}
+c$Exception.prototype.toString=function(){var class_name=this.m$class().__name__.replace(/\\./g,'::'),str=class_name+': '+(this._message||class_name);console.log(str+(this._stack!=null?'\\n        from '+this.m$backtrace().join('\\n        from '):''));return '#<'+str+'>';}
 c$NilClass.prototype.toString=function(){return 'nil';};
 c$Range.prototype.toString=function(){return ''+this._start+(this._exclusive?'...':'..')+this._end;};
 c$Regexp.prototype.toString=function(){return '/'+this._source+'/'+(/s/.test(this._options)?'m':'')+(/i/.test(this._options)?'i':'')+(/x/.test(this._options)?'x':'');};

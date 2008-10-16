@@ -204,6 +204,7 @@ module Red # :nodoc:
     is_a?
     join
     new
+    raise
     sprintf
     to_proc
     to_s
