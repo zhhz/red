@@ -33,7 +33,7 @@ module Red
         
         scope = scope_sexp.red!(:as_class_eval => true)
         
-        self << "\n\nRed.class_('%s',%s,function(){ var _=%s.prototype;\n  %s;\n})" % [namespaced_class.gsub("c$",""), superclass, namespaced_class, scope]
+        self << "\n\nRed._class('%s',%s,function(){ var _=%s.prototype;\n  %s;\n})" % [namespaced_class.gsub("c$",""), superclass, namespaced_class, scope]
         
         old_namespace_stack.nil? ? @@namespace_stack.pop : @@namespace_stack = old_namespace_stack
       end
@@ -61,7 +61,7 @@ module Red
         
         scope = scope_sexp.red!(:as_class_eval => true)
         
-        self << "\n\nRed.module('%s',function(){ var _=%s.prototype;\n  %s;\n})" % [namespaced_module.gsub("c$",""), namespaced_module, scope]
+        self << "\n\nRed._module('%s',function(){ var _=%s.prototype;\n  %s;\n})" % [namespaced_module.gsub("c$",""), namespaced_module, scope]
         
         @@namespace_stack.pop
       end

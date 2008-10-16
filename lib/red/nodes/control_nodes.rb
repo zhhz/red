@@ -81,7 +81,7 @@ module Red
         options = arguments_array_sexp.pop
         arguments = arguments_array_sexp.map {|arg| arg.red!(:as_argument => true) }.join(",")
         keyword = self.class.to_s.split('::').last.downcase
-        self << "$%s(%s)" % [keyword, arguments]
+        self << "Red.LoopError._%s(%s)" % [keyword, arguments]
       end
       
       class Break < Keyword # :nodoc:

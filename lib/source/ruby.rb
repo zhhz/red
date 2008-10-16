@@ -68,7 +68,7 @@
     return context[0]['c$'+context[1]];
   },
   
-  module: function(longName,block){
+  _module: function(longName,block){
     var newModule,context=Red.interpretNamespace(longName),namespace=context[0],name=context[1];
     if(namespace['c$'+name]) {
       newModule = namespace['c$'+name];
@@ -80,7 +80,7 @@
     if(typeof(block)=='function') { block.call(newModule); };
   },
   
-  class_: function(longName,superclass,block){
+  _class: function(longName,superclass,block){
     var newClass,context=Red.interpretNamespace(longName),namespace=context[0],name=context[1];
     if(namespace['c$'+name]) {
       if(name!=='Object' && superclass!==namespace['c$'+name].__superclass__){m$raise(c$TypeError,$q('superclass mismatch for class '+longName));};
@@ -111,9 +111,9 @@
   },
   
   LoopError: {
-    break:function(value){var e=new(Error);e.__keyword__='break';e._value=value==null?nil:value;throw(e);},
-    next:function(value){var e=new(Error);e.__keyword__='next';e._value=value==null?nil:value;throw(e);},
-    redo:function(){var e=new(Error);e.__keyword__='redo';throw(e);},
+    _break:function(value){var e=new(Error);e.__keyword__='break';e._value=value==null?nil:value;throw(e);},
+    _next:function(value){var e=new(Error);e.__keyword__='next';e._value=value==null?nil:value;throw(e);},
+    _redo:function(){var e=new(Error);e.__keyword__='redo';throw(e);},
     isA:function(e,ary){for(var i=0,l=ary.length;i<l;++i){if(e.m$isABool(ary[i])){return true;};};return false;}
   }
 };
@@ -1071,7 +1071,7 @@ class Class < Module
   # 
   # FIX: Incomplete
   def self.new(class_name, superclass = Object)
-    `Red.class(className._value,superclass,function(){})`
+    `Red._class(className._value,superclass,function(){})`
     return `window['c$'+className._value]`
   end
   
