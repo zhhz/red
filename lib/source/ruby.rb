@@ -812,9 +812,8 @@ class Module
   # 
   # FIX: Incomplete
   def append_features(mod)
-    `var tp=this.prototype,mp=mod.prototype`
-    `Red.donateMethodsToSingleton(mod,this)`
-    `Red.donateMethodsToClass(mod.prototype,this.prototype)`
+    `Red.donateMethodsToSingleton(this,mod)`
+    `Red.donateMethodsToClass(this.prototype,mod.prototype)`
     return `mod`
   end
   
