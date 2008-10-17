@@ -61,7 +61,10 @@ module Red
           args_array += [options[:block_string]] if options[:block_string]
           arguments   = args_array.join(",")
           self << "%s.m$%s(%s)" % [receiver, function, arguments]
-          @@red_methods |= [function_sexp] unless @@red_import
+          unless @@red_import
+            @@red_methods |= [function_sexp]
+            @@red_methods |= [arguments_array_sexp.last[1].last.to_sym] if function_sexp == :send && arguments_array_sexp.last.is_sexp?(:array)
+          end
         end
       end
       
