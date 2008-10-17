@@ -6,7 +6,7 @@
     Red.donateMethodsToSingleton(superclass,newClass,true);
     Red.donateMethodsToClass(superclass.prototype,newClass.prototype,true);
     if(newClass==c$Module){delete(newClass.prototype.m$initialize);};
-    if(newClass!==Number&&newClass!==Array){newClass.prototype.toString==superclass.prototype.toString;};
+    if(newClass!==Number&&newClass!==Array){newClass.prototype.toString=superclass.prototype.toString;};
   },
   
   donateMethodsToSingleton: function(donor,recipient,overwrite) {
@@ -6763,7 +6763,6 @@ class TrueClass
   
   undef initialize
 end
-
 `
 
 c$Exception.prototype.toString=function(){var class_name=this.m$class().__name__.replace(/\\./g,'::'),str=class_name+': '+(this._message||class_name);console.log(str+(this._stack!=null?'\\n        from '+this.m$backtrace().join('\\n        from '):''));return '#<'+str+'>';}
