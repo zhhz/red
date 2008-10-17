@@ -52,6 +52,7 @@
     newClass.__id__ = Red.id++;
     newClass.__modules__ = {};
     newClass.__children__ = {};
+    newClass.__class__ = c$Class;
     newClass.prototype.__class__=newClass;
     Red.donateMethodsToSingleton(c$Class.prototype,newClass,true)
   },
@@ -114,7 +115,6 @@
     _break:function(value){var e=new(Error);e.__keyword__='break';e._value=value==null?nil:value;throw(e);},
     _next:function(value){var e=new(Error);e.__keyword__='next';e._value=value==null?nil:value;throw(e);},
     _redo:function(){var e=new(Error);e.__keyword__='redo';throw(e);},
-    isA:function(e,ary){for(var i=0,l=ary.length;i<l;++i){if(e.m$isABool(ary[i])){return true;};};return false;}
   }
 };
 
@@ -132,6 +132,7 @@ window.__children__={'Object':true};
 window.m$include=function(){for(var i=0,modules=arguments,l=modules.length;i<l;++i){var mp=modules[i].prototype;for(var x in mp){if(x.slice(0,2)=='m$'){var f=function(){return arguments.callee._source[arguments.callee._name].apply(window,arguments) };f._source=mp;f._name=x;window[x]=f;};};modules[i].m$included(window);modules[i].__includers__['window']=true;};if(modules[0]!=c$Kernel){Red.donateMethodsToClass(window,c$Object.prototype);Red.updateChildren(c$Object);};return window;};
 window.m$blockGivenBool=function(){typeof(arguments[0])=='function'}
 
+function $e(e,ary){for(var i=0,l=ary.length;i<l;++i){if(e.m$isABool(ary[i])){return true;};};return false;};
 function $Q(){for(var i=1,s=arguments[0],l=arguments.length;i<l;++i){s+=$q(arguments[i]).m$toS()._value;};return $q(s);};
 function $q(obj){if(typeof obj!=='string'){return obj;};return c$String.m$new(obj);};
 function $r(value,options){return c$Regexp.m$new(value,options);};
@@ -527,10 +528,10 @@ class Object
   # FIX: Incomplete
   def is_a?(klass)
     `if(this.m$class()==klass||c$Object==klass){return true;}`  # true if instance_of? or if klass is Object
-    `if(this.m$class()._modules[klass]){return true;}`            # true if klass is included in obj's class
+    `if(this.m$class().__modules__[klass]){return true;}`            # true if klass is included in obj's class
     `if(this.m$class()==c$Object){return false;}`               # false if module check fails and obj is Object
     `var bubble=this.m$class(),result=false`
-    `while(bubble!=c$Object){if(klass==bubble||bubble._modules[klass]!=null){result=true;};if(result){break;};bubble=bubble.__superclass__;}`
+    `while(bubble!=c$Object){if(klass==bubble||bubble.__modules__[klass]!=null){result=true;};if(result){break;};bubble=bubble.__superclass__;}`
     return `result`
   end
   
@@ -560,10 +561,10 @@ class Object
   # FIX: Incomplete
   def kind_of?(klass)
     `if(this.m$class()==klass||c$Object==klass){return true;}`  # true if instance_of? or if klass is Object
-    `if(this.m$class()._modules[klass]){return true;}`            # true if klass is included in obj's class
+    `if(this.m$class().__modules__[klass]){return true;}`            # true if klass is included in obj's class
     `if(this.m$class()==c$Object){return false;}`               # false if module check fails and obj is Object
     `var bubble=this.m$class(),result=false`
-    `while(bubble!=c$Object){if(klass==bubble||bubble._modules[klass]!=null){result=true;};if(result){break;};bubble=bubble.__superclass__;}`
+    `while(bubble!=c$Object){if(klass==bubble||bubble.__modules__[klass]!=null){result=true;};if(result){break;};bubble=bubble.__superclass__;}`
     return `result`
   end
   
@@ -668,7 +669,7 @@ class Object
   # Returns +true+ if _obj_ responds to the given method.
   # 
   def respond_to?(method)
-    `typeof this[method]=='function'`
+    `typeof(this['m$'+method._value])=='function'`
   end
   
   # call-seq:
@@ -6774,4 +6775,3 @@ c$Symbol.prototype.toString=function(){var v=this._value,str=/\\s/.test(v)?'"'+v
 c$Time.prototype.toString=function(){return ''+this._value;};
 
 `
-

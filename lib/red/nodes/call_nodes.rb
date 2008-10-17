@@ -84,7 +84,8 @@ module Red
           when :block_given?
             self << "m$blockGivenBool(%s._block)" % @@red_block_arg
           else
-            self << "(this.m$%s||m$%s).call(this,%s)" % [function, function, arguments]
+            arguments = ','+arguments unless arguments.empty?
+            self << "(this.m$%s||m$%s).call(this%s)" % [function, function, arguments]
             @@red_methods |= [function_sexp] unless @@red_import
           end
         end

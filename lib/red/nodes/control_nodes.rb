@@ -55,7 +55,7 @@ module Red
         block                 = (block_sexp.is_sexp?(:block) ? block_sexp : [:block, block_sexp]).red!(:force_return => options[:force_return])
         rescue_body           = "else{%s;}" % rescue_body_sexp.red!(:force_return => options[:force_return]) if rescue_body_sexp
         
-        self << "%sif(Red.LoopError.isA(_e,%s)){_eRescued=true;%s;}%s" % [exception_variable, exception_types_array, block, rescue_body]
+        self << "%sif($e(_e,%s)){_eRescued=true;%s;}%s" % [exception_variable, exception_types_array, block, rescue_body]
       end
     end
     
