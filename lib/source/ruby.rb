@@ -5606,7 +5606,7 @@ class String
   #   'abcdef'.include?(?c)     #=> true
   # 
   def include?(obj)
-    `new(RegExp)(typeof(obj)=='number'?String.fromCharCode(obj):obj._value).test(this._value)`
+    `new(RegExp)(typeof(obj)=='number'?String.fromCharCode(obj):obj._value.replace(/([-.*+?^${}()|[\\]\\/\\\\])/g, '\\\\$1')).test(this._value)`
   end
   
   # FIX: Incomplete
