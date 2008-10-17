@@ -132,7 +132,7 @@ window.__children__={'Object':true};
 window.m$include=function(){for(var i=0,modules=arguments,l=modules.length;i<l;++i){var mp=modules[i].prototype;for(var x in mp){if(x.slice(0,2)=='m$'){var f=function(){return arguments.callee._source[arguments.callee._name].apply(window,arguments) };f._source=mp;f._name=x;window[x]=f;};};modules[i].m$included(window);modules[i].__includers__['window']=true;};if(modules[0]!=c$Kernel){Red.donateMethodsToClass(window,c$Object.prototype);Red.updateChildren(c$Object);};return window;};
 window.m$blockGivenBool=function(){typeof(arguments[0])=='function'}
 
-function $e(e,ary){for(var i=0,l=ary.length;i<l;++i){if(e.m$isABool(ary[i])){return true;};};return false;};
+function $e(e,ary){if(e.m$isABool){for(var i=0,l=ary.length;i<l;++i){if(e.m$isABool(ary[i])){return true;};};};return false;};
 function $Q(){for(var i=1,s=arguments[0],l=arguments.length;i<l;++i){s+=$q(arguments[i]).m$toS()._value;};return $q(s);};
 function $q(obj){if(typeof obj!=='string'){return obj;};return c$String.m$new(obj);};
 function $r(value,options){return c$Regexp.m$new(value,options);};
@@ -224,7 +224,7 @@ class Object
   #   k.__send__(:hello, "gentle", "readers")  #=> "Hello gentle readers"
   # 
   def __send__(method,*args)
-    `this[method].apply(this,args)`
+    `this['m$'+method._value.replace('=','Eql')].apply(this,args)`
   end
   
   # call-seq:
