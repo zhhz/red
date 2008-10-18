@@ -118,7 +118,7 @@
   }
 };
 
-var $u=undefined,nil=null;
+var $u=undefined,nil=null,$={};
 
 c$Class  = function(){this.__id__=Red.id++};c$Class.__name__='Class';c$Class.__children__={};
 c$Module = function(){this.__id__=Red.id++};c$Module.__name__='Module';c$Module.__children__={};c$Class.__superclass__=c$Module;
@@ -791,7 +791,8 @@ class Module
   def <=>(other_module)
   end
   
-  def ===(object)
+  def ===(obj)
+    `obj.m$isABool(this)`
   end
   
   def >(other_module)
