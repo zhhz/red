@@ -225,7 +225,7 @@ class Object
   # 
   def __send__(method,*args)
     `method=this['m$'+sym._value.replace('=','Eql')]`
-    `m$raise(c$NoMethodError,$q('undefined method "'+sym._value+'" for '+this))`
+    `if(!method){m$raise(c$NoMethodError,$q('undefined method "'+sym._value+'" for '+this));}`
     `method.apply(this,args)`
   end
   
@@ -693,7 +693,7 @@ class Object
   # 
   def send(sym,*args)
     `method=this['m$'+sym._value.replace('=','Eql')]`
-    `m$raise(c$NoMethodError,$q('undefined method "'+sym._value+'" for '+this))`
+    `if(!method){m$raise(c$NoMethodError,$q('undefined method "'+sym._value+'" for '+this));}`
     `method.apply(this,args)`
   end
   
