@@ -63,7 +63,7 @@ module Red
           self << "%s.m$%s(%s)" % [receiver, function, arguments]
           unless @@red_import
             @@red_methods |= [function_sexp]
-            @@red_methods |= [arguments_array_sexp.last[1].last.to_sym] if function_sexp == :send && arguments_array_sexp.last.is_sexp?(:array)
+            @@red_methods |= ([arguments_array_sexp.last[1].last.to_sym] rescue []) if function_sexp == :send && arguments_array_sexp.last.is_sexp?(:array)
           end
         end
       end
