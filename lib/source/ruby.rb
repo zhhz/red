@@ -224,7 +224,9 @@ class Object
   #   k.__send__(:hello, "gentle", "readers")  #=> "Hello gentle readers"
   # 
   def __send__(method,*args)
-    `this['m$'+method._value.replace('=','Eql')].apply(this,args)`
+    `method=this['m$'+sym._value.replace('=','Eql')]`
+    `m$raise(c$NoMethodError,$q('undefined method "'+sym._value+'" for '+this))`
+    `method.apply(this,args)`
   end
   
   # call-seq:
@@ -689,8 +691,10 @@ class Object
   #   k = Klass.new
   #   k.send(:hello, "gentle", "readers")  #=> "Hello gentle readers"
   # 
-  def send(method,*args)
-    `this['m$'+method._value.replace('=','Eql')].apply(this,args)`
+  def send(sym,*args)
+    `method=this['m$'+sym._value.replace('=','Eql')]`
+    `m$raise(c$NoMethodError,$q('undefined method "'+sym._value+'" for '+this))`
+    `method.apply(this,args)`
   end
   
   # FIX: Incomplete
@@ -2949,12 +2953,16 @@ class Exception
     `this._message==null?$q(this.m$class().__name__.replace(/\\./g,'::')):$q(this._message)`
   end
 end
-
+`
+c$Exception.prototype.toString=function(){var class_name=this.m$class().__name__.replace(/\\./g,'::'),str=class_name+': '+(this._message||class_name);console.log(str+(this._stack!=null?'\\n        from '+this.m$backtrace().join('\\n        from '):''));return '#<'+str+'>';}
+`
 class StandardError < Exception     ; end
 class ArgumentError < StandardError ; end
 class IndexError < StandardError    ; end
 class RangeError < StandardError    ; end
 class RuntimeError < StandardError  ; end
+class NameError < StandardError     ; end
+class NoMethodError < NameError     ; end
 class TypeError < StandardError     ; end
 
 # The global value +false+ is the only instance of class +FalseClass+ and
@@ -6765,7 +6773,6 @@ class TrueClass
 end
 `
 
-c$Exception.prototype.toString=function(){var class_name=this.m$class().__name__.replace(/\\./g,'::'),str=class_name+': '+(this._message||class_name);console.log(str+(this._stack!=null?'\\n        from '+this.m$backtrace().join('\\n        from '):''));return '#<'+str+'>';}
 c$NilClass.prototype.toString=function(){return 'nil';};
 c$Range.prototype.toString=function(){return ''+this._start+(this._exclusive?'...':'..')+this._end;};
 c$Regexp.prototype.toString=function(){return '/'+this._source+'/'+(/s/.test(this._options)?'m':'')+(/i/.test(this._options)?'i':'')+(/x/.test(this._options)?'x':'');};
