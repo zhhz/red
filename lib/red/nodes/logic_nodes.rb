@@ -40,22 +40,29 @@ module Red
     end
     
     class Conjunction < LogicNode # :nodoc:
-      # [:and, {expression}, {expression}]
-      # [:or,  {expression}, {expression}]
-      def initialize(expression_a_sexp, expression_b_sexp, options)
-        a = expression_a_sexp.red!(:as_argument => true)
-        b = expression_b_sexp.red!(:as_argument => true)
-        string = self.class::STRING
-        self << string % [a,b]
-      end
-      
       class And < Conjunction # :nodoc:
+        # [:and, {expression}, {expression}]
         # FIX: nil && obj produces false instead of nil
-        STRING = "(_a=$T(%s)?(_c=$T(_b=%s)?_b:_c):_a)"
+        def initialize(expression_a_sexp, expression_b_sexp, options)
+          a = expression_a_sexp.red!(:as_argument => true)
+          b = expression_b_sexp.red!(:as_argument => true)
+          d = @@red_boolean.succ!.dup
+          e = @@red_boolean.succ!.dup
+          f = @@red_boolean.succ!.dup
+          string = "($.%s=$T(%s)?($.%s=$T($.%s=%s)?$.%s:$.%s):$.%s)" % [d, '%s', f, e, '%s', e, f, d]
+          self << string % [a,b]
+        end
       end
       
       class Or < Conjunction # :nodoc:
-        STRING = "($T(_a=%s)?_a:%s)"
+        # [:or,  {expression}, {expression}]
+        def initialize(expression_a_sexp, expression_b_sexp, options)
+          a = expression_a_sexp.red!(:as_argument => true)
+          b = expression_b_sexp.red!(:as_argument => true)
+          c = @@red_boolean.succ!.dup
+          string = "($T($.%s=%s)?$.%s:%s)" % [c, '%s', c, '%s']
+          self << string % [a,b]
+        end
       end
     end
     

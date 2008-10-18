@@ -219,11 +219,11 @@ module Red # :nodoc:
     @@red_singleton   = nil
     @@red_block_arg   = nil
     @@red_import      = false
+    @@red_boolean     = 'a'
     return true
   end
   
   def red!(options = {}, reset = false)
-    Red.init if reset
     case self
     when Array
       raise(BuildError::UnknownNode, "Don't know how to handle sexp type :#{self.first}") unless ARRAY_NODES[self.first]
