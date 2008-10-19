@@ -4104,6 +4104,10 @@ class NilClass
     0
   end
   
+  def to_proc # :nodoc:
+    nil
+  end
+  
   # call-seq:
   #   nil.to_s -> ''
   # 
