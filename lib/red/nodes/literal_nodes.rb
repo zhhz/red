@@ -28,7 +28,7 @@ module Red
         # as_argument: duplicates :force_return and adds "function() {
         #   <multiline block>; }()" wrapper to the entire block.
         options = expression_sexps.pop
-        if options[:as_argument] || options[:as_assignment] || options[:force_return] && expression_sexps.last.is_a?(::Array) && !expression_sexps.last.is_sexp?(:rescue, :ensure, :begin) && (expression_sexps.last.first == :iter ? true : !expression_sexps.last.flatten.include?(:return))
+        if options[:as_argument] || options[:as_assignment] || options.delete(:force_return) && expression_sexps.last.is_a?(::Array) && !expression_sexps.last.is_sexp?(:rescue, :ensure, :begin) && (expression_sexps.last.first == :iter ? true : !expression_sexps.last.flatten.include?(:return))
           returner = "return %s" % [expression_sexps.pop.red!(:as_argument => true)]
         end
         string = options[:as_argument] || options[:as_assignment] ? "function(){%s;}.m$(this)()" : "%s"
