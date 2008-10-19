@@ -69,6 +69,7 @@ module Red
       end
       
       class ImplicitReceiver < Method # :nodoc:
+        # [:vcall]
         # [:fcall, :foo, (:array, {expression}, {expression}, ...)]
         def initialize(function_sexp, *arguments_array_sexp)
           options     = arguments_array_sexp.pop

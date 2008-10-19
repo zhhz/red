@@ -150,7 +150,7 @@ module Red
         (options = contents_sexp) && (contents_sexp = [:block]) if contents_sexp.is_a?(::Hash)
         variables  = []
         contents_sexp.flatten.each_with_index do |x,i|
-          variables.push(contents_sexp.flatten[i + 1]) if [:lasgn,:vcall].include?(x)
+          variables.push(contents_sexp.flatten[i + 1]) if x == :lasgn
         end
         variables -= (contents_sexp.delete(contents_sexp.assoc(:args)) || [])[1..-1] || [] # don't want to undefine the arguments in a method definition
         declare    = "var %s" % variables.map {|x| "%s=$u" % x.red! }.uniq.join(",") unless variables.empty?

@@ -99,7 +99,7 @@ module Red # :nodoc:
     :true         => LogicNode::Boolean::True,
     :undef        => DefinitionNode::Undef,
     :until        => ControlNode::Loop::Until,
-    :vcall        => VariableNode::OtherVariable,
+    :vcall        => CallNode::Method::ImplicitReceiver,
     :when         => LogicNode::Case::When,
     :while        => ControlNode::Loop::While,
     :xstr         => LiteralNode::Uninterpreted,
