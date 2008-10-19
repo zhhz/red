@@ -3,7 +3,7 @@ module Red
     class Ampersand < CallNode # :nodoc:
       # [:block_pass, {expression}, {expression}]
       def initialize(block_pass_sexp, function_call_sexp, options)
-        block_string = "%s.m$toProc()._block" % block_pass_sexp.red!(:as_receiver => true)
+        block_string = "%s.m$toProc().__block__" % block_pass_sexp.red!(:as_receiver => true)
         function_call = function_call_sexp.red!(options.merge(:block_string => block_string))
         self << "%s" % [function_call]
       end
@@ -86,7 +86,7 @@ module Red
           when :[]
             self << "this.m$%s(%s)" % [function, arguments]
           when :block_given?
-            self << "m$blockGivenBool(%s._block)" % @@red_block_arg
+            self << "m$blockGivenBool(%s.__block__)" % @@red_block_arg
           else
             arguments = ','+arguments unless arguments.empty?
             self << "(this.m$%s||m$%s).call(this%s)" % [function, function, arguments]

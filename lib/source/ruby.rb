@@ -112,8 +112,8 @@
   },
   
   LoopError: {
-    _break:function(value){var e=new(Error);e.__keyword__='break';e._value=value==null?nil:value;throw(e);},
-    _next:function(value){var e=new(Error);e.__keyword__='next';e._value=value==null?nil:value;throw(e);},
+    _break:function(returnValue){var e=new(Error);e.__keyword__='break';e.__return__=returnValue==null?nil:returnValue;throw(e);},
+    _next:function(returnValue){var e=new(Error);e.__keyword__='next';e.__return__=returnValue==null?nil:returnValue;throw(e);},
     _redo:function(){var e=new(Error);e.__keyword__='redo';throw(e);},
   }
 };
@@ -125,7 +125,7 @@ c$Module = function(){this.__id__=Red.id++};c$Module.__name__='Module';c$Module.
 c$Object = function(){this.__id__=Red.id++};c$Object.__name__='Object';c$Object.__children__={};c$Module.__superclass__=c$Object;
 
 c$Object.prototype.toString=function(){return '#<'+this.m$class().__name__.replace(/\\./g,'::')+':0x'+(this.__id__*999^4000000).toString(16)+'>'};
-Function.prototype.m$=function(o){var f=this;var p=function(){return f.apply(o,arguments);};p._arity=f.arity;p.__id__=Red.id++;return p;};
+Function.prototype.m$=function(o){var f=this;var p=function(){return f.apply(o,arguments);};p.__arity__=f.arity;p.__id__=Red.id++;return p;};
 window.__name__='window';
 window.prototype=window;
 window.__children__={'Object':true};
@@ -133,10 +133,10 @@ window.m$include=function(){for(var i=0,modules=arguments,l=modules.length;i<l;+
 window.m$blockGivenBool=function(){typeof(arguments[0])=='function'}
 
 function $e(e,ary){if(e.m$isABool){for(var i=0,l=ary.length;i<l;++i){if(e.m$isABool(ary[i])){return true;};};};return false;};
-function $Q(){for(var i=1,s=arguments[0],l=arguments.length;i<l;++i){s+=$q(arguments[i]).m$toS()._value;};return $q(s);};
+function $Q(){for(var i=1,s=arguments[0],l=arguments.length;i<l;++i){s+=$q(arguments[i]).m$toS().__value__;};return $q(s);};
 function $q(obj){if(typeof obj!=='string'){return obj;};return c$String.m$new(obj);};
 function $r(value,options){return c$Regexp.m$new(value,options);};
-function $s(value){return(c$Symbol._table[value]||c$Symbol.m$new(value));};
+function $s(value){return(c$Symbol.__table__[value]||c$Symbol.m$new(value));};
 function $T(x){return x!==false&&x!==nil&&x!=undefined;};
 
 `
@@ -224,8 +224,8 @@ class Object
   #   k.__send__(:hello, "gentle", "readers")  #=> "Hello gentle readers"
   # 
   def __send__(method,*args)
-    `method=this['m$'+sym._value.replace('=','Eql')]`
-    `if(!method){m$raise(c$NoMethodError,$q('undefined method "'+sym._value+'" for '+this));}`
+    `method=this['m$'+sym.__value__.replace('=','Eql')]`
+    `if(!method){m$raise(c$NoMethodError,$q('undefined method "'+sym.__value__+'" for '+this));}`
     `method.apply(this,args)`
   end
   
@@ -407,7 +407,7 @@ class Object
   #   k.instance_eval { @secret }   #=> 99
   # 
   def instance_eval(&block)
-    `block._block.m$(this)()`
+    `block.__block__.m$(this)()`
   end
   
   # call-seq:
@@ -436,7 +436,7 @@ class Object
   #   k.instance_variable_defined?("@b")   #=> false
   # 
   def instance_variable_defined?(name)
-    `this[name._value.replace('@','i$')]!=null`
+    `this[name.__value__.replace('@','i$')]!=null`
   end
   
   # call-seq:
@@ -456,7 +456,7 @@ class Object
   #   k.instance_variable_get(:@a)    #=> 99
   # 
   def instance_variable_get(name)
-    `var v=this[name._value.replace('@','i$')]`
+    `var v=this[name.__value__.replace('@','i$')]`
     `v==null?nil:v`
   end
   
@@ -478,7 +478,7 @@ class Object
   # 
   # FIX: Incomplete
   def instance_variable_set(name, obj)
-    `this[name._value.replace('@','i$')]=obj`
+    `this[name.__value__.replace('@','i$')]=obj`
   end
   
   # call-seq:
@@ -671,7 +671,7 @@ class Object
   # Returns +true+ if _obj_ responds to the given method.
   # 
   def respond_to?(method)
-    `typeof(this['m$'+method._value])=='function'`
+    `typeof(this['m$'+method.__value__])=='function'`
   end
   
   # call-seq:
@@ -692,8 +692,8 @@ class Object
   #   k.send(:hello, "gentle", "readers")  #=> "Hello gentle readers"
   # 
   def send(sym,*args)
-    `method=this['m$'+sym._value.replace('=','Eql')]`
-    `if(!method){m$raise(c$NoMethodError,$q('undefined method "'+sym._value+'" for '+this));}`
+    `method=this['m$'+sym.__value__.replace('=','Eql')]`
+    `if(!method){m$raise(c$NoMethodError,$q('undefined method "'+sym.__value__+'" for '+this));}`
     `method.apply(this,args)`
   end
   
@@ -778,7 +778,7 @@ class Module
   #   a.say_bye          #=> "goodbye"
   # 
   def initialize(module_name, &block)
-    `this.__name__=moduleName._value||moduleName`
+    `this.__name__=moduleName.__value__||moduleName`
     `this.prototype={}`
   end
   
@@ -824,15 +824,15 @@ class Module
   end
   
   def attr(attribute, writer = false)
-    `var a=attribute._value`
+    `var a=attribute.__value__`
     `f1=this.prototype['m$'+a]=function(){return this['i$'+arguments.callee._name];};f1._name=a`
-    `if(writer){f2=this.prototype['m$'+a._value+'Eql']=function(x){return this['i$'+arguments.callee._name]=x;};f2._name=a;}`
+    `if(writer){f2=this.prototype['m$'+a.__value__+'Eql']=function(x){return this['i$'+arguments.callee._name]=x;};f2._name=a;}`
     return nil
   end
   
   def attr_accessor(*symbols)
     `for(var i=0,l=symbols.length;i<l;++i){
-      var a=symbols[i]._value;
+      var a=symbols[i].__value__;
       f1=this.prototype['m$'+a]=function(){return this['i$'+arguments.callee._name];};f1._name=a;
       f2=this.prototype['m$'+a+'Eql']=function(x){return this['i$'+arguments.callee._name]=x;};f2._name=a;
     }`
@@ -841,7 +841,7 @@ class Module
   
   def attr_reader(*symbols)
     `for(var i=0,l=symbols.length;i<l;++i){
-      var a=symbols[i]._value;
+      var a=symbols[i].__value__;
       f=this.prototype['m$'+a]=function(){return this['i$'+arguments.callee._name];};f._name=a;
     }`
     return nil
@@ -849,7 +849,7 @@ class Module
   
   def attr_writer(*symbols)
     `for(var i=0,l=symbols.length;i<l;++i){
-      var a=symbols[i]._value;
+      var a=symbols[i].__value__;
       f=this.prototype['m$'+a+'Eql']=function(x){return this['i$'+arguments.callee._name]=x;};f._name=a;
     }`
     return nil
@@ -1077,8 +1077,8 @@ class Class < Module
   # 
   # FIX: Incomplete
   def self.new(class_name, superclass = Object)
-    `Red._class(className._value,superclass,function(){})`
-    return `window['c$'+className._value]`
+    `Red._class(className.__value__,superclass,function(){})`
+    return `window['c$'+className.__value__]`
   end
   
   # call-seq:
@@ -1319,7 +1319,7 @@ module Kernel
   # FIX: Incomplete
   def lambda(func)
     `result=new(c$Proc)()`
-    `result._block=func`
+    `result.__block__=func`
     return `result`
   end
   
@@ -1359,7 +1359,7 @@ module Kernel
   # FIX: Incomplete
   def proc(func)
     `result=new(c$Proc)()`
-    `result._block=func`
+    `result.__block__=func`
     return `result`
   end
   
@@ -1376,7 +1376,7 @@ module Kernel
   # FIX: Incomplete
   def puts(obj)
     `var string=obj.m$toS&&obj.m$toS()||$q(''+obj)`
-    `console.log(string._value.replace(/\\\\/g,'\\\\\\\\'))`
+    `console.log(string.__value__.replace(/\\\\/g,'\\\\\\\\'))`
     return nil
   end
   
@@ -1395,7 +1395,7 @@ module Kernel
       }
     }`
     `var e=e||exception_class.m$new(msg)`
-    `e._stack=new Error().stack`
+    `e.__stack__=new Error().stack`
     `throw(e)`
     return nil
   end
@@ -1437,13 +1437,13 @@ module Kernel
   
   # FIX: Incomplete
   def sprintf(string)
-    `var i=1,source=string._value,result=[],m=$u,arg=$u,val=$u,str=$u,dL=$u,chr=$u,pad=$u;
+    `var i=1,source=string.__value__,result=[],m=$u,arg=$u,val=$u,str=$u,dL=$u,chr=$u,pad=$u;
     while(source){
       if(m=source.match(/^[^%]+/)){result.push(m[0]);source=source.slice(m[0].length);continue;};
       if(m=source.match(/^%%/))   {result.push('%'); source=source.slice(m[0].length);continue;};
       //                  1(0)2(wdth)      3(prec) 4(field-type      )
       if(m=source.match(/^%(0)?(\\d+)?(?:\\.(\\d+))?([bcdEefGgiopsuXx])/)){
-        arg = arguments[i]._value||arguments[i];
+        arg = arguments[i].__value__||arguments[i];
         switch(m[4]){
           case'b':str=parseFloat(arg).toString(2);break;
           case'c':str=String.fromCharCode(arg);break;
@@ -1455,8 +1455,8 @@ module Kernel
           case'g':str='-FIX-';break;
           case'i':val=parseInt(arg);str=''+val;break;
           case'o':str=parseFloat(arg).toString(8);break;
-          case'p':str=$q(arg).m$inspect()._value;break;
-          case's':val=arg.m$toS&&arg.m$toS()._value||arg;str=(m[3]?val.slice(0,m[2]):val);break;
+          case'p':str=$q(arg).m$inspect().__value__;break;
+          case's':val=arg.m$toS&&arg.m$toS().__value__||arg;str=(m[3]?val.slice(0,m[2]):val);break;
           case'u':val=parseInt(arg);str=''+(val<0?'..'+(Math.pow(2,32)+val):val);break;
           case'X':str=parseInt(arg).toString(16).toUpperCase();break;
           case'x':str=parseInt(arg).toString(16);break;
@@ -1869,7 +1869,7 @@ class Array
   def [](index, length)
     `var l=this.length`
     `if(index.m$class()==c$Range){
-      var start=index._start,end=index._exclusive?index._end-1:index._end;
+      var start=index.__start__,end=index.__esclusive__?index.__end__-1:index.__end__;
       index=start<0?start+l:start;
       length=(end<0?end+l:end)-index+1;
       if(length<0){length=0};
@@ -1910,7 +1910,7 @@ class Array
   def []=(index, length, object)
     `var l=this.length`
     `if(object==null){object=length;length=$u;}`
-    `if(index.m$class()==c$Range){var start=index._start,end=index._exclusive?index._end-1:index._end;index=start<0?start+l:start;length=(end<0?end+l:end)-index+1;if(length<0){length=0};}else{if(index<0){index+=l;};if(length<0){throw('IndexError: negative length')}}`
+    `if(index.m$class()==c$Range){var start=index.__start__,end=index.__exclusive__?index.__end__-1:index.__end__;index=start<0?start+l:start;length=(end<0?end+l:end)-index+1;if(length<0){length=0};}else{if(index<0){index+=l;};if(length<0){throw('IndexError: negative length')}}`
     `if(index<0){throw('RangeError: out of range');}`
     `while(this.length<index){this.push(nil);}`
     `if($T(length)){var l=this.length,final=(index+length>l)?l:index+length;this._replace(this.slice(0,index).concat(object===nil?[]:(object.m$class()==c$Array?object:[object])).concat(this.slice(final,l)))}else{this[index]=object}`
@@ -1981,7 +1981,7 @@ class Array
   #   a                           #=> [1, 2, 3, 4]
   # 
   def collect
-    `for(var i=0,l=this.length,result=[];i<l;++i){try{result[i]=#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':result[i]=e._value;break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length,result=[];i<l;++i){try{result[i]=#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':result[i]=e.__return__;break;case 'break':return e.__return__;break;case 'redo':--i;break;default:throw(e);};};}`
     return `result`
   end
   
@@ -1999,7 +1999,7 @@ class Array
   #   a.collect! {|x| x + 100 }   #=> [201, 202, 203, 204]
   # 
   def collect!
-    `for(var i=0,l=this.length;i<l;++i){try{this[i]=#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':this[i]=e._value;break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length;i<l;++i){try{this[i]=#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':this[i]=e.__return__;break;case 'break':return e.__return__;break;case 'redo':--i;break;default:throw(e);};};}`
     return self
   end
   
@@ -2098,7 +2098,7 @@ class Array
   #   a.delete_if {|element| element >= 'b' }   #=> ["a"]
   # 
   def delete_if
-    `for(var temp=[],i=0,l=this.length;i<l;++i){try{if(!$T(#{yield `this[i]`})){temp.push(this[i]);};}catch(e){switch(e.__keyword__){case 'next':if(!$T(e._value)){temp.push(this[i]);};break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var temp=[],i=0,l=this.length;i<l;++i){try{if(!$T(#{yield `this[i]`})){temp.push(this[i]);};}catch(e){switch(e.__keyword__){case 'next':if(!$T(e.__return__)){temp.push(this[i]);};break;case 'break':return e.__return__;break;case 'redo':--i;break;default:throw(e);};};}`
     `this._replace(temp)`
   end
   
@@ -2116,7 +2116,7 @@ class Array
   #   C
   # 
   def each
-    `for(var i=0,l=this.length;i<l;++i){try{#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length;i<l;++i){try{#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e.__return__;break;case 'redo':--i;break;default:throw(e);};};}`
     return self
   end
   
@@ -2134,7 +2134,7 @@ class Array
   #   102
   # 
   def each_index
-    `for(var i=0,l=this.length;i<l;++i){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length;i<l;++i){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e.__return__;break;case 'redo':--i;break;default:throw(e);};};}`
     return self
   end
   
@@ -2336,7 +2336,7 @@ class Array
   #   [1,2,3].inspect   #=> "[1, 2, 3]"
   # 
   def inspect
-    `for(var i=1,l=this.length,result='['+(this[0]!=null?this[0].m$inspect()._value:'');i<l;++i){result+=', '+this[i].m$inspect()._value;}`
+    `for(var i=1,l=this.length,result='['+(this[0]!=null?this[0].m$inspect().__value__:'');i<l;++i){result+=', '+this[i].m$inspect().__value__;}`
     return `$q(result+']')`
   end
   
@@ -2351,8 +2351,8 @@ class Array
   #   %w(a b c).join('.')   #=> "a.b.c"
   # 
   def join(str = '')
-    `var result=this[0]!=null?this[0].m$join?this[0].m$join(str._value)._value:this[0].m$toS()._value:''`
-    `for(var i=1,l=this.length;i<l;++i){result+=(str._value||'')+(this[i].m$join?this[i].m$join(str)._value:this[i].m$toS()._value);}`
+    `var result=this[0]!=null?this[0].m$join?this[0].m$join(str.__value__).__value__:this[0].m$toS().__value__:''`
+    `for(var i=1,l=this.length;i<l;++i){result+=(str.__value__||'')+(this[i].m$join?this[i].m$join(str).__value__:this[i].m$toS().__value__);}`
     return `$q(result)`
   end
   
@@ -2402,7 +2402,7 @@ class Array
   #   a                       #=> [1, 2, 3, 4]
   # 
   def map
-    `for(var i=0,l=this.length,result=[];i<l;++i){try{result[i]=#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':result[i]=e._value;break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length,result=[];i<l;++i){try{result[i]=#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':result[i]=e.__return__;break;case 'break':return e.__return__;break;case 'redo':--i;break;default:throw(e);};};}`
     return `result`
   end
   
@@ -2420,7 +2420,7 @@ class Array
   #   a.map! {|x| x + 100 }   #=> [201, 202, 203, 204]
   # 
   def map!
-    `for(var i=0,l=this.length;i<l;++i){try{this[i]=#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':this[i]=e._value;break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length;i<l;++i){try{this[i]=#{yield `this[i]`};}catch(e){switch(e.__keyword__){case 'next':this[i]=e.__return__;break;case 'break':return e.__return__;break;case 'redo':--i;break;default:throw(e);};};}`
     return self
   end
   
@@ -2498,7 +2498,7 @@ class Array
   #   a                       #=> [1, 2, 3, 4, 5]
   # 
   def reject
-    `for(var i=0,l=this.length,result=[];i<l;++i){try{if(!$T(#{yield `this[i]`})){result.push(this[i]);};}catch(e){switch(e.__keyword__){case 'next':if(!$T(e._value)){result.push(this[i]);};break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length,result=[];i<l;++i){try{if(!$T(#{yield `this[i]`})){result.push(this[i]);};}catch(e){switch(e.__keyword__){case 'next':if(!$T(e.__return__)){result.push(this[i]);};break;case 'break':return e.__return__;break;case 'redo':--i;break;default:throw(e);};};}`
     return `result`
   end
   
@@ -2515,7 +2515,7 @@ class Array
   #   a                         #=> [1, 2, 3]
   # 
   def reject!
-    `for(var i=0,l=this.length,temp=[];i<l;++i){try{if(!$T(#{yield `this[i]`})){temp.push(this[i]);};}catch(e){switch(e.__keyword__){case 'next':if(!$T(e._value)){temp.push(this[i]);};break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length,temp=[];i<l;++i){try{if(!$T(#{yield `this[i]`})){temp.push(this[i]);};}catch(e){switch(e.__keyword__){case 'next':if(!$T(e.__return__)){temp.push(this[i]);};break;case 'break':return e.__return__;break;case 'redo':--i;break;default:throw(e);};};}`
     return `temp.length==l?nil:this._replace(temp)`
   end
   
@@ -2578,7 +2578,7 @@ class Array
   #   A
   # 
   def reverse_each
-    `for(var i=this.length;i>0;){try{#{yield `this[--i]`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':++i;break;default:throw(e);};};}`
+    `for(var i=this.length;i>0;){try{#{yield `this[--i]`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e.__return__;break;case 'redo':++i;break;default:throw(e);};};}`
     return self
   end
   
@@ -2607,7 +2607,7 @@ class Array
   #   [1,2,3,4,5].select {|x| x > 3 }   #=> [4, 5]
   # 
   def select
-    `for(var i=0,l=this.length,result=[];i<l;++i){try{if($T(#{yield `this[i]`})){result.push(this[i]);};}catch(e){switch(e.__keyword__){case 'next':if($T(e._value)){result.push(this[i]);};break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=0,l=this.length,result=[];i<l;++i){try{if($T(#{yield `this[i]`})){result.push(this[i]);};}catch(e){switch(e.__keyword__){case 'next':if($T(e.__return__)){result.push(this[i]);};break;case 'break':return e.__return__;break;case 'redo':--i;break;default:throw(e);};};}`
     return `result`
   end
   
@@ -2690,7 +2690,7 @@ class Array
   # 
   def slice!(index, length)
     `var l=this.length`
-    `if(index.m$class()==c$Range){var start=index._start,end=index._exclusive?index._end-1:index._end;index=start<0?start+l:start;length=(end<0?end+l:end)-index+1;if(length<0){length=0};}else{if(index<0){index+=l;};if(length<0){throw('IndexError: negative length')};}`
+    `if(index.m$class()==c$Range){var start=index.__start__,end=index.__exclusive__?index.__end__-1:index.__end__;index=start<0?start+l:start;length=(end<0?end+l:end)-index+1;if(length<0){length=0};}else{if(index<0){index+=l;};if(length<0){throw('IndexError: negative length')};}`
     `if(index>=l){return nil;}`
     `if(index<0){throw('RangeError: out of range');}`
     `if($T(length)){if(length<=0){return [];};result=this.slice(index,index+length);this._replace(this.slice(0,index).concat(this.slice(index+length)));}else{result=this[index];this._replace(this.slice(0,index).concat(this.slice(index+1,l)));}`
@@ -2869,7 +2869,7 @@ class Exception
   # Returns a new +Exception+ object, with an optional _message_.
   # 
   def initialize(msg)
-    `if(msg!=null){this._message=msg._value;}`
+    `if(msg!=null){this.__message__=msg.__value__;}`
   end
   
   # call-seq:
@@ -2879,8 +2879,8 @@ class Exception
   # array of strings, each containing <i>"/path/to/filename:line"</i>.
   # 
   def backtrace
-    `if(this._stack==null){return [];}`
-    `for(var i=0,lines=this._stack.match(/@[^\\n]+:\\d+/g),l=lines.length,result=[];i<l;++i){result.push($q(lines[i].match(/@\\w+:\\/*(\\/[^\\n]+:\\d+)/)[1]));}`
+    `if(this.__stack__==null){return [];}`
+    `for(var i=0,lines=this.__stack__.match(/@[^\\n]+:\\d+/g),l=lines.length,result=[];i<l;++i){result.push($q(lines[i].match(/@\\w+:\\/*(\\/[^\\n]+:\\d+)/)[1]));}`
     return `result`
   end
   
@@ -2903,7 +2903,7 @@ class Exception
   # 
   def inspect
     `var class_name=this.m$class().__name__.replace(/\\./g,'::')`
-    `this._message==''?$q(class_name):$q('#<'+class_name+': '+(this._message||class_name)+'>')`
+    `this.__message__==''?$q(class_name):$q('#<'+class_name+': '+(this.__message__||class_name)+'>')`
   end
   
   # call-seq:
@@ -2915,7 +2915,7 @@ class Exception
   # is set).
   # 
   def message
-    `this._message==null?$q(this.m$class().__name__.replace(/\\./g,'::')):$q(this._message)`
+    `this.__message__==null?$q(this.m$class().__name__.replace(/\\./g,'::')):$q(this.__message__)`
   end
   
   # call-seq:
@@ -2925,8 +2925,8 @@ class Exception
   # an array of +String+ objects in the format described in
   # <tt>Exception#backtrace</tt>.
   def set_backtrace(ary)
-    `for(var i=0,l=ary.length,result='';i<l;++i){result=result+'@xx://'+ary[i]._value+'\\n';}`
-    `this._stack=result`
+    `for(var i=0,l=ary.length,result='';i<l;++i){result=result+'@xx://'+ary[i].__value__+'\\n';}`
+    `this.__stack__=result`
     return `ary`
   end
   
@@ -2939,7 +2939,7 @@ class Exception
   # is set).
   # 
   def to_s
-    `this._message==null?$q(this.m$class().__name__.replace(/\\./g,'::')):$q(this._message)`
+    `this.__message__==null?$q(this.m$class().__name__.replace(/\\./g,'::')):$q(this.__message__)`
   end
   
   # call-seq:
@@ -2951,11 +2951,11 @@ class Exception
   # is set).
   # 
   def to_str
-    `this._message==null?$q(this.m$class().__name__.replace(/\\./g,'::')):$q(this._message)`
+    `this.__message__==null?$q(this.m$class().__name__.replace(/\\./g,'::')):$q(this.__message__)`
   end
 end
 `
-c$Exception.prototype.toString=function(){var class_name=this.m$class().__name__.replace(/\\./g,'::'),str=class_name+': '+(this._message||class_name);console.log(str+(this._stack!=null?'\\n        from '+this.m$backtrace().join('\\n        from '):''));return '#<'+str+'>';}
+c$Exception.prototype.toString=function(){var class_name=this.m$class().__name__.replace(/\\./g,'::'),str=class_name+': '+(this.__message__||class_name);console.log(str+(this.__stack__!=null?'\\n        from '+this.m$backtrace().join('\\n        from '):''));return '#<'+str+'>';}
 `
 class StandardError < Exception     ; end
 class ArgumentError < StandardError ; end
@@ -3046,7 +3046,7 @@ class Hash
   # 
   def self.[](*args)
     `if(args.length==1&&args[0].m$class()==c$Hash){return args[0];}`
-    `for(var i=0,l=args.length,result=c$Hash.m$new(),c=result._contents;i<l;i+=2){var k=args[i],v=args[i+1],h=k.m$hash();c[h]=[k,v]}`
+    `for(var i=0,l=args.length,result=c$Hash.m$new(),c=result.__contents__;i<l;i+=2){var k=args[i],v=args[i+1],h=k.m$hash();c[h]=[k,v]}`
     return `result`
   end
   
@@ -3085,8 +3085,8 @@ class Hash
   #   h2.keys           #=> [:c, :d]
   # 
   def initialize(&block)
-    `this._default=(block==null?nil:block)`
-    `this._contents={}`
+    `this.__default__=(block==null?nil:block)`
+    `this.__contents__={}`
   end
   
   # call-seq:
@@ -3105,7 +3105,7 @@ class Hash
   #   h3 == h4    #=> false
   # 
   def ==(other)
-    `var c=this._contents,o=other._contents`
+    `var c=this.__contents__,o=other.__contents__`
     `for(var x in o){if(x.slice(1,2)=='_'&&c[x]==null){return false;};}`
     `for(var x in c){if(x.slice(1,2)=='_'&&!c[x][1].m$_eql2(o[x][1])){return false;};}`
     return true
@@ -3124,8 +3124,8 @@ class Hash
   #   h[:c]   => nil
   # 
   def [](k)
-    `var kv=this._contents[k.m$hash()]`
-    `if(!kv){var d=this._default;return(typeof(d)=='function'?d(this,kv[0]):d);}`
+    `var kv=this.__contents__[k.m$hash()]`
+    `if(!kv){var d=this.__default__;return(typeof(d)=='function'?d(this,kv[0]):d);}`
     return `kv[1]`
   end
   
@@ -3144,7 +3144,7 @@ class Hash
   #   h             #=> {:a => 150, :b => 200, :c => 300}
   # 
   def []=(k,v)
-    `this._contents[k.m$hash()]=[k,v]`
+    `this.__contents__[k.m$hash()]=[k,v]`
     return `v`
   end
   
@@ -3159,7 +3159,7 @@ class Hash
   #   h         #=> {}
   # 
   def clear
-    `this._contents={}`
+    `this.__contents__={}`
     return self
   end
   
@@ -3183,7 +3183,7 @@ class Hash
   #   h.default(2)                              #=> 20
   # 
   def default(key = nil)
-    `var d=this._default`
+    `var d=this.__default__`
     return `typeof(d)=='function'?d(this,key):d`
   end
   
@@ -3207,7 +3207,7 @@ class Hash
   #   h['foo']    #=> #<Proc:201>
   # 
   def default=(obj)
-    `this._default=obj`
+    `this.__default__=obj`
     return self
   end
   
@@ -3224,7 +3224,7 @@ class Hash
   #    a                                  #=> [nil, nil, 4]
   # 
   def default_proc
-    `var d=this._default`
+    `var d=this.__default__`
     return `typeof(d)=='function'?c$Proc.m$new(d):nil`
   end
   
@@ -3244,7 +3244,7 @@ class Hash
   #   h.delete(:z) {|k| "#{k.inspect} not found" }    #=> ":z not found"
   # 
   def delete(k)
-    `var c=this._contents,d=this._default,x=k.m$hash(),kv=c[x]`
+    `var c=this.__contents__,d=this.__default__,x=k.m$hash(),kv=c[x]`
     `if(kv!=null){var result=kv[1];delete(c[x]);return result;}`
     return `typeof(_block)=='function'?#{yield `k`}:(typeof(d)=='function'?d(this,k):d)`
   end
@@ -3260,8 +3260,8 @@ class Hash
   #   h.delete_if {|k,v| v >= 200 }    #=> {:a => 100}
   # 
   def delete_if
-    `var c=this._contents`
-    `for(var x in c){try{if(x.slice(1,2)=='_'&&$T(#{yield(`c[x][0]`,`c[x][1]`)})){delete(c[x]);};}catch(e){switch(e.__keyword__){case 'next':if($T(e._value)){delete(c[x]);};break;case 'break':return e._value;break;default:throw(e);};};}`
+    `var c=this.__contents__`
+    `for(var x in c){try{if(x.slice(1,2)=='_'&&$T(#{yield(`c[x][0]`,`c[x][1]`)})){delete(c[x]);};}catch(e){switch(e.__keyword__){case 'next':if($T(e.__return__)){delete(c[x]);};break;case 'break':return e.__return__;break;default:throw(e);};};}`
     return self
   end
   
@@ -3287,8 +3287,8 @@ class Hash
   #   key-value array is [:b, 100]
   # 
   def each
-    `var c=this._contents`
-    `for(var x in c){try{if(x.slice(1,2)=='_'){var kv=c[x];_block._arity==1?#{yield(`[kv[0],kv[1]]`)}:#{yield(`kv[0],kv[1]`)}};}catch(e){switch(e.__keyword__){case 'next':;break;case 'break':return e._value;break;default:throw(e);};};}`
+    `var c=this.__contents__`
+    `for(var x in c){try{if(x.slice(1,2)=='_'){var kv=c[x];_block.__arity__==1?#{yield(`[kv[0],kv[1]]`)}:#{yield(`kv[0],kv[1]`)}};}catch(e){switch(e.__keyword__){case 'next':;break;case 'break':return e.__return__;break;default:throw(e);};};}`
     return self
   end
   
@@ -3307,8 +3307,8 @@ class Hash
   #   :b
   # 
   def each_key
-    `var c=this._contents`
-    `for(var x in c){try{if(x.slice(1,2)=='_'){#{yield `c[x][0]`}};}catch(e){switch(e.__keyword__){case 'next':;break;case 'break':return e._value;break;default:throw(e);};};}`
+    `var c=this.__contents__`
+    `for(var x in c){try{if(x.slice(1,2)=='_'){#{yield `c[x][0]`}};}catch(e){switch(e.__keyword__){case 'next':;break;case 'break':return e.__return__;break;default:throw(e);};};}`
     return self
   end
   
@@ -3328,8 +3328,8 @@ class Hash
   #   :b is 200
   # 
   def each_pair
-    `var c=this._contents`
-    `for(var x in c){try{if(x.slice(1,2)=='_'){var kv=c[x];#{yield(`kv[0]`,`kv[1]`)}};}catch(e){switch(e.__keyword__){case 'next':;break;case 'break':return e._value;break;default:throw(e);};};}`
+    `var c=this.__contents__`
+    `for(var x in c){try{if(x.slice(1,2)=='_'){var kv=c[x];#{yield(`kv[0]`,`kv[1]`)}};}catch(e){switch(e.__keyword__){case 'next':;break;case 'break':return e.__return__;break;default:throw(e);};};}`
     return self
   end
   
@@ -3349,8 +3349,8 @@ class Hash
   #   200
   # 
   def each_value
-    `var c=this._contents`
-    `for(var x in c){try{if(x.slice(1,2)=='_'){#{yield `c[x][1]`}};}catch(e){switch(e.__keyword__){case 'next':;break;case 'break':return e._value;break;default:throw(e);};};}`
+    `var c=this.__contents__`
+    `for(var x in c){try{if(x.slice(1,2)=='_'){#{yield `c[x][1]`}};}catch(e){switch(e.__keyword__){case 'next':;break;case 'break':return e.__return__;break;default:throw(e);};};}`
     return self
   end
   
@@ -3362,7 +3362,7 @@ class Hash
   #   {}.empty?   #=> true
   # 
   def empty?
-    `for(var x in this._contents){if(x.slice(1,2)=='_'){return false;};}`
+    `for(var x in this.__contents__){if(x.slice(1,2)=='_'){return false;};}`
     return true
   end
   
@@ -3381,7 +3381,7 @@ class Hash
   #   h.fetch(:z) { |k| "No value at #{k.inspect}"}   #=> "No value at :z"
   # 
   def fetch(key, &block)
-    `var c=this._contents,k=key.m$hash(),kv=c[k]`
+    `var c=this.__contents__,k=key.m$hash(),kv=c[k]`
     `if(kv!=null){return kv[1];}`
     return `typeof(block)=='function'?block(key):block`
   end
@@ -3400,7 +3400,7 @@ class Hash
   #   h.has_key?(:z)    #=> false
   # 
   def has_key?(k)
-    `!!this._contents[k.m$hash()]`
+    `!!this.__contents__[k.m$hash()]`
   end
   
   # call-seq:
@@ -3416,7 +3416,7 @@ class Hash
   #   h.has_value?(999)   #=> false
   # 
   def has_value?(value)
-    `var c=this._contents`
+    `var c=this.__contents__`
     `for(var x in c){if(x.slice(1,2)=='_'&&c[x][1].m$_eql2(value)){return true;};}`
     return false
   end
@@ -3438,7 +3438,7 @@ class Hash
   #   h.include?(:z)    #=> false
   # 
   def include?(k)
-    `!!this._contents[k.m$hash()]`
+    `!!this.__contents__[k.m$hash()]`
   end
   
   # call-seq:
@@ -3452,7 +3452,7 @@ class Hash
   #   h.index(999)    #=> nil
   # 
   def index(value)
-    `var c=this._contents`
+    `var c=this.__contents__`
     `for(var x in c){var kv=c[x];if(x.slice(1,2)=='_'&&kv[1].m$_eql2(value)){return kv[0];};}`
     return nil
   end
@@ -3467,8 +3467,8 @@ class Hash
   #   h.inspect   #=> "{:a => 100, :b => 200}"
   # 
   def inspect
-    `var contents=[],c=this._contents`
-    `for(var x in c){if(x.slice(1,2)=='_'){var kv=c[x];contents.push(kv[0].m$inspect()._value+' => '+kv[1].m$inspect()._value);};}`
+    `var contents=[],c=this.__contents__`
+    `for(var x in c){if(x.slice(1,2)=='_'){var kv=c[x];contents.push(kv[0].m$inspect().__value__+' => '+kv[1].m$inspect().__value__);};}`
     return `$q('{'+contents.join(', ')+'}')`
   end
   
@@ -3483,8 +3483,8 @@ class Hash
   #   h.invert    #=> {100 => :m, 300 => :y, 200 => :d, 0 => :a}
   # 
   def invert
-    `var c=this._contents,result=c$Hash.m$new()`
-    `for(var x in c){if(x.slice(1,2)=='_'){var ckv=c[x],rkv=result._contents[ckv[1].m$hash()]=[];rkv[0]=ckv[1];rkv[1]=ckv[0]};}`
+    `var c=this.__contents__,result=c$Hash.m$new()`
+    `for(var x in c){if(x.slice(1,2)=='_'){var ckv=c[x],rkv=result.__contents__[ckv[1].m$hash()]=[];rkv[0]=ckv[1];rkv[1]=ckv[0]};}`
     return `result`
   end
   
@@ -3502,7 +3502,7 @@ class Hash
   #   h.key?(:z)    #=> false
   # 
   def key?(k)
-    `!!this._contents[k.m$hash()]`
+    `!!this.__contents__[k.m$hash()]`
   end
   
   # call-seq:
@@ -3516,7 +3516,7 @@ class Hash
   #   h.keys    #=> [:a, :b]
   # 
   def keys
-    `var c=this._contents,result=[]`
+    `var c=this.__contents__,result=[]`
     `for(var x in c){if(x.slice(1,2)=='_'){result.push(c[x][0]);};}`
     return `result`
   end
@@ -3534,7 +3534,7 @@ class Hash
   #   h.length    #=> 0
   # 
   def length
-    `var c=this._contents,result=0`
+    `var c=this.__contents__,result=0`
     `for(var x in c){if(x.slice(1,2)=='_'){result++;};}`
     return `result`
   end
@@ -3553,7 +3553,7 @@ class Hash
   #   h.member?(:z)   #=> false
   # 
   def member?(k)
-    `!!this._contents[k.m$hash()]`
+    `!!this.__contents__[k.m$hash()]`
   end
   
   # call-seq:
@@ -3572,7 +3572,7 @@ class Hash
   # 
   # FIX: Doesn't handle loop control keywords
   def merge(other)
-    `var c=this._contents,o=other._contents,result=c$Hash.m$new(),r=result._contents`
+    `var c=this.__contents__,o=other.__contents__,result=c$Hash.m$new(),r=result.__contents__`
     `for(var x in c){if(x.slice(1,2)=='_'){r[x]=c[x];};}`
     `for(var x in o){var ckv=c[x],okv=o[x];if(x.slice(1,2)=='_'){typeof(_block)=='function'&&ckv!=null?r[x]=[ckv[0],#{yield(`ckv[0]`,`ckv[1]`,`okv[1]`)}]:r[x]=okv;};}`
     return `result`
@@ -3596,7 +3596,7 @@ class Hash
   # 
   # FIX: Doesn't handle loop control keywords
   def merge!(other)
-    `var c=this._contents,o=other._contents`
+    `var c=this.__contents__,o=other.__contents__`
     `for(var x in o){var ckv=c[x],okv=o[x];if(x.slice(1,2)=='_'){typeof(_block)=='function'&&ckv!=null?ckv[1]=#{yield(`ckv[0]`,`ckv[1]`,`okv[1]`)}:c[x]=okv;};}`
     return self
   end
@@ -3614,8 +3614,8 @@ class Hash
   #   h                           #=> {:a => 100, :b => 200, :c => 300}
   # 
   def reject
-    `var c=this._contents,result=c$Hash.m$new()`
-    `for(var x in c){try{var kv=c[x];if(x.slice(1,2)=='_'&&!$T(#{yield(`kv[0]`,`kv[1]`)})){result._contents[x]=kv;};}catch(e){switch(e.__keyword__){case 'next':if(!$T(e._value)){result._contents[x]=kv;};break;case 'break':return e._value;break;default:throw(e);};};}`
+    `var c=this.__contents__,result=c$Hash.m$new()`
+    `for(var x in c){try{var kv=c[x];if(x.slice(1,2)=='_'&&!$T(#{yield(`kv[0]`,`kv[1]`)})){result.__contents__[x]=kv;};}catch(e){switch(e.__keyword__){case 'next':if(!$T(e.__return__)){result.__contents__[x]=kv;};break;case 'break':return e.__return__;break;default:throw(e);};};}`
     return `result`
   end
   
@@ -3633,8 +3633,8 @@ class Hash
   #   h                             #=> {:a => 100}
   # 
   def reject!
-    `var c=this._contents,u=true`
-    `for(var x in c){try{var kv=c[x];if(x.slice(1,2)=='_'&&$T(#{yield(`kv[0]`,`kv[1]`)})){u=false;delete(c[x]);};}catch(e){switch(e.__keyword__){case 'next':if($T(e._value)){u=false;delete(c[x]);};break;case 'break':return e._value;break;default:throw(e);};};}`
+    `var c=this.__contents__,u=true`
+    `for(var x in c){try{var kv=c[x];if(x.slice(1,2)=='_'&&$T(#{yield(`kv[0]`,`kv[1]`)})){u=false;delete(c[x]);};}catch(e){switch(e.__keyword__){case 'next':if($T(e.__return__)){u=false;delete(c[x]);};break;case 'break':return e.__return__;break;default:throw(e);};};}`
     return `u?nil:this`
   end
   
@@ -3649,8 +3649,8 @@ class Hash
   #   h                                 #=> {:c => 300, :d => 400}
   # 
   def replace(other)
-    `this._contents={}`
-    `var c=this._contents,o=other._contents`
+    `this.__contents__={}`
+    `var c=this.__contents__,o=other.__contents__`
     `for(var x in o){if(x.slice(1,2)=='_'){c[x]=o[x];};}`
     return self
   end
@@ -3667,8 +3667,8 @@ class Hash
   #   h.select {|k,v| v < 200}    #=> [[:a, 100]]
   # 
   def select
-    `var c=this._contents,result=[]`
-    `for(var x in c){try{var kv=c[x];if(x.slice(1,2)=='_'&&$T(#{yield(`kv[0]`,`kv[1]`)})){result.push(kv);};}catch(e){switch(e.__keyword__){case 'next':if($T(e._value)){result.push(kv);};break;case 'break':return e._value;break;default:throw(e);};};}`
+    `var c=this.__contents__,result=[]`
+    `for(var x in c){try{var kv=c[x];if(x.slice(1,2)=='_'&&$T(#{yield(`kv[0]`,`kv[1]`)})){result.push(kv);};}catch(e){switch(e.__keyword__){case 'next':if($T(e.__return__)){result.push(kv);};break;case 'break':return e.__return__;break;default:throw(e);};};}`
     return `result`
   end
   
@@ -3686,7 +3686,7 @@ class Hash
   #   h         #=> {}
   # 
   def shift
-    `var c=this._contents,d=this._default,result=typeof(d)=='function'?d(nil):d`
+    `var c=this.__contents__,d=this.__default__,result=typeof(d)=='function'?d(nil):d`
     `for(var x in c){if(x.slice(1,2)=='_'){result=[c[x][0],c[x][1]];delete(c[x]);break;};}`
     return `result`
   end
@@ -3704,7 +3704,7 @@ class Hash
   #   h.size    #=> 0
   # 
   def size
-    `var c=this._contents,result=0`
+    `var c=this.__contents__,result=0`
     `for(var x in c){if(x.slice(1,2)=='_'){result++;};}`
     return `result`
   end
@@ -3723,7 +3723,7 @@ class Hash
   # 
   # FIX: Doesn't handle loop control keywords
   def sort(&block)
-    `var c=this._contents,result=[]`
+    `var c=this.__contents__,result=[]`
     `for(var x in c){if(x.slice(1,2)=='_'){result.push(c[x]);};}`
     return `c$Array.prototype._quickSort.call(result,0,result.length,block)`
   end
@@ -3743,7 +3743,7 @@ class Hash
   #   h                 #=> {:a => 150, :b => 200, :c => 300}
   # 
   def store(k,v)
-    `this._contents[k.m$hash()]=[k,v]`
+    `this.__contents__[k.m$hash()]=[k,v]`
     return `v`
   end
   
@@ -3757,7 +3757,7 @@ class Hash
   #   h.to_a    #=> [[:a, 100], [:b, 200]]
   # 
   def to_a
-    `var c=this._contents,result=[]`
+    `var c=this.__contents__,result=[]`
     `for(var x in c){if(x.slice(1,2)=='_'){result.push(c[x]);};}`
     return `result`
   end
@@ -3779,7 +3779,7 @@ class Hash
   # <tt>Array#join</tt> with the default separator.
   # 
   def to_s
-    `var c=this._contents,result=[]`
+    `var c=this.__contents__,result=[]`
     `for(var x in c){if(x.slice(1,2)=='_'){result.push(c[x]);};}`
     return `c$Array.prototype.m$join.call(result)`
   end
@@ -3802,7 +3802,7 @@ class Hash
   # 
   # FIX: Doesn't handle loop control keywords
   def update(other)
-    `var c=this._contents,o=other._contents`
+    `var c=this.__contents__,o=other.__contents__`
     `for(var x in o){var ckv=c[x],okv=o[x];if(x.slice(1,2)=='_'){typeof(_block)=='function'&&ckv!=null?ckv[1]=#{yield(`ckv[0]`,`ckv[1]`,`okv[1]`)}:c[x]=okv;};}`
     return self
   end
@@ -3820,8 +3820,8 @@ class Hash
   #   h.value?(999)   #=> false
   # 
   def value?(value)
-    `var c=this._contents`
-    `for(var x in this._contents){if(x.slice(1,2)=='_'&&c[x][1].m$_eql2(value)){return true;};}`
+    `var c=this.__contents__`
+    `for(var x in this.__contents__){if(x.slice(1,2)=='_'&&c[x][1].m$_eql2(value)){return true;};}`
     return false
   end
   
@@ -3836,7 +3836,7 @@ class Hash
   #   h.values    #=> [100, 200]
   # 
   def values
-    `var c=this._contents,result=[]`
+    `var c=this.__contents__,result=[]`
     `for(var x in c){if(x.slice(1,2)=='_'){result.push(c[x][1]);};}`
     return `result`
   end
@@ -3852,7 +3852,7 @@ class Hash
   #   h.values_at(:a,:c)    #=> [100,300]
   # 
   def values_at(*args)
-    `for(var i=0,l=args.length,c=this._contents,d=this._default,result=[];i<l;++i){var h=args[i].m$hash(),kv=c[h];result.push(kv?kv[1]:(typeof(d)=='function'?d(this,args[i]):d))}`
+    `for(var i=0,l=args.length,c=this.__contents__,d=this.__default__,result=[];i<l;++i){var h=args[i].m$hash(),kv=c[h];result.push(kv?kv[1]:(typeof(d)=='function'?d(this,args[i]):d))}`
     return `result`
   end
 end
@@ -3863,7 +3863,7 @@ end
 # 
 class MatchData
   def initialize # :nodoc:
-    `this._captures=[]`
+    `this.__captures__=[]`
   end
   
   # call-seq:
@@ -3885,7 +3885,7 @@ class MatchData
   #   m[-3, 2]   #=> ["X", "113"]
   # 
   def [](*args)
-    `c$Array.prototype.m$_brac.apply(this._captures,args)`
+    `c$Array.prototype.m$_brac.apply(this.__captures__,args)`
   end
   
   # FIX: Incomplete
@@ -3905,7 +3905,7 @@ class MatchData
   #   m[3]    #=> "8"
   # 
   def captures
-    `this._captures.slice(1)`
+    `this.__captures__.slice(1)`
   end
   
   # FIX: Incomplete
@@ -3923,7 +3923,7 @@ class MatchData
   #   m.length    #=> 5
   # 
   def length
-    `this._captures.length`
+    `this.__captures__.length`
   end
   
   def inspect # :nodoc:
@@ -3944,7 +3944,7 @@ class MatchData
   #   m.post_match    #=> ": The Movie"
   # 
   def post_match
-    `this._post`
+    `this.__post__`
   end
   
   # call-seq:
@@ -3957,7 +3957,7 @@ class MatchData
   #   m.pre_match   #=> "T"
   # 
   def pre_match
-    `this._pre`
+    `this.__pre__`
   end
   
   # FIX: Incomplete
@@ -3975,7 +3975,7 @@ class MatchData
   #   m.size    #=> 5
   # 
   def size
-    `this._captures.length`
+    `this.__captures__.length`
   end
   
   # call-seq:
@@ -3991,7 +3991,7 @@ class MatchData
   #   m2.string   #=> "THX1138."
   # 
   def string
-    `$q(this._string)`
+    `$q(this.__string__)`
   end
   
   # call-seq:
@@ -4004,7 +4004,7 @@ class MatchData
   #   m.to_a    #=> ["HX1138", "H", "X", "113", "8"]
   #
   def to_a
-    `this._captures`
+    `this.__captures__`
   end
   
   # call-seq:
@@ -4017,7 +4017,7 @@ class MatchData
   #   m.to_s    #=> "HX1138"
   #
   def to_s
-    `this._captures[0]`
+    `this.__captures__[0]`
   end
   
   # FIX: Incomplete
@@ -4382,7 +4382,7 @@ class Numeric
   #   1..
   # 
   def downto(limit)
-    `for(var i=this.valueOf();i>=limit;--i){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':++i;break;default:throw(e);};};}`
+    `for(var i=this.valueOf();i>=limit;--i){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e.__return__;break;case 'redo':++i;break;default:throw(e);};};}`
     return self
   end
   
@@ -4542,7 +4542,7 @@ class Numeric
   # 
   def step(limit, step)
     `var i=this.valueOf()`
-    `if(step>0){if(i<limit){for(;limit>=i;i+=step){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':i-=step;break;default:throw(e);};};};};}else{if(i>limit){for(;limit<=i;i+=step){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':i-=step;break;default:throw(e);};}};;};}`
+    `if(step>0){if(i<limit){for(;limit>=i;i+=step){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e.__return__;break;case 'redo':i-=step;break;default:throw(e);};};};};}else{if(i>limit){for(;limit<=i;i+=step){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e.__return__;break;case 'redo':i-=step;break;default:throw(e);};}};;};}`
     return self
   end
   
@@ -4579,7 +4579,7 @@ class Numeric
   #   4
   # 
   def times
-    `for(var i=0,l=this.valueOf();i<l;++i){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};}}`
+    `for(var i=0,l=this.valueOf();i<l;++i){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e.__return__;break;case 'redo':--i;break;default:throw(e);};}}`
     return self
   end
   
@@ -4661,7 +4661,7 @@ class Numeric
   #   100..
   # 
   def upto(limit)
-    `for(var i=this.valueOf();i<=limit;++i){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e._value;break;case 'redo':--i;break;default:throw(e);};};}`
+    `for(var i=this.valueOf();i<=limit;++i){try{#{yield `i`};}catch(e){switch(e.__keyword__){case 'next':break;case 'break':return e.__return__;break;case 'redo':--i;break;default:throw(e);};};}`
     return self
   end
   
@@ -4697,7 +4697,7 @@ class Proc
   # Creates a new +Proc+ object, bound to the current context.
   # 
   def initialize(func)
-    `this._block=func`
+    `this.__block__=func`
   end
   
   # FIX: Incomplete
@@ -4718,7 +4718,7 @@ class Proc
   #   proc[4]   #=> 400
   # 
   def []()
-    `this._block.apply(this,arguments)`
+    `this.__block__.apply(this,arguments)`
   end
   
   # FIX: Incomplete
@@ -4740,7 +4740,7 @@ class Proc
   #   proc.call(4)    #=> 400
   # 
   def call
-    `this._block.apply(this,arguments)`
+    `this.__block__.apply(this,arguments)`
   end
   
   # call-seq:
@@ -4804,9 +4804,9 @@ class Range
   # it will be excluded.
   # 
   def initialize(start,finish,exclusive=false)
-    `this._start=start`
-    `this._end=finish`
-    `this._exclusive=exclusive`
+    `this.__start__=start`
+    `this.__end__=finish`
+    `this.__exclusive__=exclusive`
   end
   
   # call-seq:
@@ -4822,7 +4822,7 @@ class Range
   # 
   def ==(object)
     `if(object.constructor!==c$Range){return false;}`
-    `this._start.m$_eql2(object._start)&&this._end.m$_eql2(object._end)&&this._exclusive==object._exclusive`
+    `this.__start__.m$_eql2(object.__start__)&&this.__end__.m$_eql2(object.__end__)&&this.__exclusive__==object.__exclusive__`
   end
   
   # call-seq:
@@ -4845,8 +4845,8 @@ class Range
   #   high
   # 
   def ===(obj)
-    `var s=#{obj <=> `this._start`},e=#{obj <=> `this._end`}`
-    `s==0||s==1?(this._exclusive?e==-1:e==-1||e==0):false`
+    `var s=#{obj <=> `this.__start__`},e=#{obj <=> `this.__end__`}`
+    `s==0||s==1?(this.__exclusive__?e==-1:e==-1||e==0):false`
   end
   
   # call-seq:
@@ -4858,13 +4858,13 @@ class Range
   #   (1..10).begin   #=> 1
   # 
   def begin
-    `this._start`
+    `this.__start__`
   end
   
   # FIX: Incomplete
   def each
-    `var start=this._start,end=this._end`
-    `if(typeof(start)=='number'&&typeof(end)=='number'){if(!this._exclusive){end++;};for(var i=start;i<end;i++){#{yield `i`};};}`
+    `var start=this.__start__,end=this.__end__`
+    `if(typeof(start)=='number'&&typeof(end)=='number'){if(!this.__exclusive__){end++;};for(var i=start;i<end;i++){#{yield `i`};};}`
     return self
   end
   
@@ -4878,7 +4878,7 @@ class Range
   #   (1...10).end    #=> 10
   # 
   def end()
-    `this._end`
+    `this.__end__`
   end
   
   # call-seq:
@@ -4887,7 +4887,7 @@ class Range
   # Returns +true+ if _rng_ excludes its end value.
   # 
   def exclude_end?
-    `this._exclusive`
+    `this.__exclusive__`
   end
   
   # call-seq:
@@ -4903,7 +4903,7 @@ class Range
   # 
   def eql?(object)
     `if(object.constructor!==c$Range){return false;}`
-    `this._start.m$eqlBool(object._start)&&this._end.m$eqlBool(object._end)&&this._exclusive==object._exclusive`
+    `this.__start__.m$eqlBool(object.__start__)&&this.__end__.m$eqlBool(object.__end__)&&this.__exclusive__==object.__exclusive__`
   end
   
   # call-seq:
@@ -4915,7 +4915,7 @@ class Range
   #   (1..10).first   #=> 1
   # 
   def first
-    `this._start`
+    `this.__start__`
   end
   
   # FIX: Incomplete
@@ -4933,8 +4933,8 @@ class Range
   #   (1...10).include?(10)   #=> false
   # 
   def include?(obj)
-    `var s=#{obj <=> `this._start`},e=#{obj <=> `this._end`}`
-    `s==0||s==1?(this._exclusive?e==-1:e==-1||e==0):false`
+    `var s=#{obj <=> `this.__start__`},e=#{obj <=> `this.__end__`}`
+    `s==0||s==1?(this.__exclusive__?e==-1:e==-1||e==0):false`
   end
   
   # call-seq:
@@ -4944,7 +4944,7 @@ class Range
   # and end objects).
   # 
   def inspect
-    `$q(''+this._start.m$inspect()+(this._exclusive?'...':'..')+this._end.m$inspect())`
+    `$q(''+this.__start__.m$inspect()+(this.__exclusive__?'...':'..')+this.__end__.m$inspect())`
   end
   
   # call-seq:
@@ -4957,7 +4957,7 @@ class Range
   #   (1...10).last   #=> 10
   # 
   def last
-    `this._end`
+    `this.__end__`
   end
   
   # call-seq:
@@ -4971,8 +4971,8 @@ class Range
   #   (1...10).member?(10)   #=> false
   # 
   def member?(obj)
-    `var s=#{obj <=> `this._start`},e=#{obj <=> `this._end`}`
-    `s==0||s==1?(this._exclusive?e==-1:e==-1||e==0):false`
+    `var s=#{obj <=> `this.__start__`},e=#{obj <=> `this.__end__`}`
+    `s==0||s==1?(this.__exclusive__?e==-1:e==-1||e==0):false`
   end
   
   # FIX: Incomplete
@@ -4985,7 +4985,7 @@ class Range
   # Converts _rng_ to a printable form.
   # 
   def to_s
-    `$q(''+this._start+(this._exclusive?'...':'..')+this._end)`
+    `$q(''+this.__start__+(this.__exclusive__?'...':'..')+this.__end__)`
   end
 end
 
@@ -5038,7 +5038,7 @@ class Regexp
   #   Regexp.escape('\\*?{}.')   #=> \\\\\*\?\{\}\.
   # 
   def self.escape(str)
-    `$q(str._value.replace(/([-.*+?^${}()|[\\]\\/\\\\])/g, '\\\\$1'))`
+    `$q(str.__value__.replace(/([-.*+?^${}()|[\\]\\/\\\\])/g, '\\\\$1'))`
   end
   
   # FIX: Incomplete
@@ -5056,7 +5056,7 @@ class Regexp
   #   Regexp.quote('\\*?{}.')   #=> \\\\\*\?\{\}\.
   # 
   def self.quote(str)
-    `str._value.replace(/([-.*+?^${}()|[\\]\\/\\\\])/g, '\\\\$1')`
+    `str.__value__.replace(/([-.*+?^${}()|[\\]\\/\\\\])/g, '\\\\$1')`
   end
   
   # FIX: Incomplete
@@ -5079,9 +5079,9 @@ class Regexp
   #   r3 = Regexp.new(r2)                         #=> /cat/i
   # 
   def initialize(regexp, options)
-    `switch(options){case 0:this._options='';break;case 1:this._options='i';break;case 2:this._options='x';break;case 3:this._options='ix';break;case 4:this._options='s';break;case 5:this._options='si';break;case 6:this._options='sx';break;case 7:this._options='six';break;default:this._options=options?'i':'';}`
-    `this._source=regexp._value||regexp`
-    `this._value=new(RegExp)(this._source,'m'+(/i/.test(this._options)?'i':''))`
+    `switch(options){case 0:this.__options__='';break;case 1:this.__options__='i';break;case 2:this.__options__='x';break;case 3:this.__options__='ix';break;case 4:this.__options__='s';break;case 5:this.__options__='si';break;case 6:this.__options__='sx';break;case 7:this.__options__='six';break;default:this.__options__=options?'i':'';}`
+    `this.__source__=regexp.__value__||regexp`
+    `this.__value__=new(RegExp)(this.__source__,'m'+(/i/.test(this.__options__)?'i':''))`
   end
   
   # call-seq:
@@ -5095,7 +5095,7 @@ class Regexp
   #   /abc/ == /abc/i   #=> false
   # 
   def ==(rxp)
-    `this._source===rxp._source&&this._options===rxp._options`
+    `this.__source__===rxp.__source__&&this.__options__===rxp.__options__`
   end
   
   # call-seq:
@@ -5116,9 +5116,9 @@ class Regexp
   # FIX: Incomplete
   def ===(string)
     `var c=$u,result=c$MatchData.m$new()`
-    `if(!$T(c=string._value.match(this._value))){return nil;}`
-    `for(var i=0,l=c.length;i<l;++i){result._captures[i]=$q(c[i])}`
-    `result._string=string._value`
+    `if(!$T(c=string.__value__.match(this.__value__))){return nil;}`
+    `for(var i=0,l=c.length;i<l;++i){result.__captures__[i]=$q(c[i])}`
+    `result.__string__=string.__value__`
     return `result`
   end
   
@@ -5134,9 +5134,9 @@ class Regexp
   # FIX: Incomplete
   def =~(string)
     `var c=$u,result=c$MatchData.m$new()`
-    `if(!$T(c=string._value.match(this._value))){return nil;}`
-    `for(var i=0,l=c.length;i<l;++i){result._captures[i]=$q(c[i])}`
-    `result._string=string._value`
+    `if(!$T(c=string.__value__.match(this.__value__))){return nil;}`
+    `for(var i=0,l=c.length;i<l;++i){result.__captures__[i]=$q(c[i])}`
+    `result.__string__=string.__value__`
     return `result`
   end
   
@@ -5150,7 +5150,7 @@ class Regexp
   # Returns the status of the +IGNORECASE+ flag.
   # 
   def casefold?
-    `/i/.test(this._options)`
+    `/i/.test(this.__options__)`
   end
   
   # call-seq:
@@ -5164,7 +5164,7 @@ class Regexp
   #   /abc/.eql? /abc/i   #=> false
   # 
   def eql?(rxp)
-    `this._source===rxp._source&&this._options===rxp._options`
+    `this.__source__===rxp.__source__&&this.__options__===rxp.__options__`
   end
   
   def hash # :nodoc:
@@ -5192,11 +5192,11 @@ class Regexp
   # 
   def match(string)
     `var c=$u,result=c$MatchData.m$new()`
-    `if(!$T(c=string._value.match(this._value))){return nil;}`
-    `for(var i=0,l=c.length;i<l;++i){result._captures[i]=$q(c[i])}`
-    `result._string=string._value`
-    `result._pre=RegExp.leftContext`
-    `result._post=RegExp.rightContext`
+    `if(!$T(c=string.__value__.match(this.__value__))){return nil;}`
+    `for(var i=0,l=c.length;i<l;++i){result.__captures__[i]=$q(c[i])}`
+    `result.__string__=string.__value__`
+    `result.__pre__=RegExp.leftContext`
+    `result.__post__=RegExp.rightContext`
     return `result`
   end
   
@@ -5220,9 +5220,9 @@ class Regexp
   # 
   def options
     `var result=0`
-    `if(/i/.test(this._options)){result+=1}`
-    `if(/x/.test(this._options)){result+=2}`
-    `if(/s/.test(this._options)){result+=4}`
+    `if(/i/.test(this.__options__)){result+=1}`
+    `if(/x/.test(this.__options__)){result+=2}`
+    `if(/s/.test(this.__options__)){result+=4}`
     return `result`
   end
   
@@ -5234,7 +5234,7 @@ class Regexp
   #   /ab+c/i.source   #=> "ab+c"
   # 
   def source
-    `$q(this._source)`
+    `$q(this.__source__)`
   end
   
   # call-seq:
@@ -5247,8 +5247,8 @@ class Regexp
   #   /ab+c/i.to_s   #=> "(?i-mx:ab+c)"
   # 
   def to_s
-    `var o=this._options.replace('s','m'),c=o.match(/(m)?(i)?(x)?/)`
-    `$q('(?'+o+(c[0]=='mix'?'':'-')+(c[1]?'':'m')+(c[2]?'':'i')+(c[3]?'':'x')+':'+this._source+')')`
+    `var o=this.__options__.replace('s','m'),c=o.match(/(m)?(i)?(x)?/)`
+    `$q('(?'+o+(c[0]=='mix'?'':'-')+(c[1]?'':'m')+(c[2]?'':'i')+(c[3]?'':'x')+':'+this.__source__+')')`
   end
 end
 
@@ -5265,7 +5265,7 @@ class String
   # Returns a new string object containing a copy of _str_.
   # 
   def initialize(string = `''`)
-    `this._value=string._value||string`
+    `this.__value__=string.__value__||string`
   end
   
   # call-seq:
@@ -5293,7 +5293,7 @@ class String
   #   'abc ' * 3    #=> "abc abc abc "
   # 
   def *(n)
-    `for(var i=0,str=this._value,result='';i<n;++i){result+=str;}`
+    `for(var i=0,str=this.__value__,result='';i<n;++i){result+=str;}`
     return `$q(result)`
   end
   
@@ -5306,7 +5306,7 @@ class String
   #   'abc' + 'def'   #=> 'abcdef'
   # 
   def +(str)
-    `$q(this._value + str._value)`
+    `$q(this.__value__ + str.__value__)`
   end
   
   # call-seq:
@@ -5325,7 +5325,7 @@ class String
   #    s << 103 << 104    #=> "abcdefgh"
   # 
   def <<(obj)
-    `this._value+=(typeof(obj)=='number'?String.fromCharCode(obj):obj._value)`
+    `this.__value__+=(typeof(obj)=='number'?String.fromCharCode(obj):obj.__value__)`
     return self
   end
   
@@ -5350,7 +5350,7 @@ class String
   # 
   def <=>(str)
     `if(str.m$class()!=c$String){return nil;}`
-    `var tv=this._value,sv=str._value`
+    `var tv=this.__value__,sv=str.__value__`
     `if(tv>sv){return 1;}`
     `if(tv==sv){return 0;}`
     `if(tv<sv){return -1;}`
@@ -5414,7 +5414,7 @@ class String
   #   '123ABC'.capitalize   #=> "123abc"
   # 
   def capitalize
-    `var v=this._value`
+    `var v=this.__value__`
     `$q(v.slice(0,1).toUpperCase()+v.slice(1,v.length).toLowerCase())`
   end
   
@@ -5431,9 +5431,9 @@ class String
   #   s               #=> "Abcdef"
   # 
   def capitalize!
-    `var v=this._value`
-    `this._value=v.slice(0,1).toUpperCase()+v.slice(1,v.length).toLowerCase()`
-    return `v==this._value?nil:this`
+    `var v=this.__value__`
+    `this.__value__=v.slice(0,1).toUpperCase()+v.slice(1,v.length).toLowerCase()`
+    return `v==this.__value__?nil:this`
   end
   
   # call-seq:
@@ -5448,7 +5448,7 @@ class String
   # 
   def casecmp(str)
     `if(str.m$class()!=c$String){return nil;}`
-    `var tv=this._value.toLowerCase(),sv=str._value.toLowerCase()`
+    `var tv=this.__value__.toLowerCase(),sv=str.__value__.toLowerCase()`
     `if(tv>sv){return 1;}`
     `if(tv==sv){return 0;}`
     `if(tv<sv){return -1;}`
@@ -5491,7 +5491,7 @@ class String
   #    a.concat(103).concat(104)    #=> "abcdefgh"
   # 
   def concat(obj)
-    `this._value+=(typeof(obj)=='number'?String.fromCharCode(obj):obj._value)`
+    `this.__value__+=(typeof(obj)=='number'?String.fromCharCode(obj):obj.__value__)`
     return self
   end
   
@@ -5520,7 +5520,7 @@ class String
   #   'aBCDEf'.downcase   #=> "abcdef"
   # 
   def downcase
-    `$q(this._value.toLowerCase())`
+    `$q(this.__value__.toLowerCase())`
   end
   
   # call-seq:
@@ -5536,9 +5536,9 @@ class String
   #   s             #=> "abcdef"
   # 
   def downcase!
-    `var v=this._value`
-    `this._value=v.toLowerCase()`
-    return `v==this._value?nil:this`
+    `var v=this.__value__`
+    `this.__value__=v.toLowerCase()`
+    return `v==this.__value__?nil:this`
   end
   
   # FIX: Incomplete
@@ -5562,7 +5562,7 @@ class String
   #   ''.empty?         #=> true
   # 
   def empty?
-    `this._value==''`
+    `this.__value__==''`
   end
   
   # call-seq:
@@ -5572,7 +5572,7 @@ class String
   # 
   def eql?(str)
     `if(str.m$class()!=c$String){return false;}`
-    `this._value==str._value`
+    `this.__value__==str.__value__`
   end
   
   # FIX: Incomplete
@@ -5584,7 +5584,7 @@ class String
   end
   
   def hash # :nodoc:
-    `'q_'+this._value`
+    `'q_'+this.__value__`
   end
   
   # call-seq:
@@ -5600,7 +5600,7 @@ class String
   #   'abcdef'.hex    #=> 0
   # 
   def hex
-    `var result=parseInt(this._value,16)`
+    `var result=parseInt(this.__value__,16)`
     return `result.toString()=='NaN'?0:result`
   end
   
@@ -5615,7 +5615,7 @@ class String
   #   'abcdef'.include?(?c)     #=> true
   # 
   def include?(obj)
-    `new(RegExp)(typeof(obj)=='number'?String.fromCharCode(obj):obj._value.replace(/([-.*+?^${}()|[\\]\\/\\\\])/g, '\\\\$1')).test(this._value)`
+    `new(RegExp)(typeof(obj)=='number'?String.fromCharCode(obj):obj.__value__.replace(/([-.*+?^${}()|[\\]\\/\\\\])/g, '\\\\$1')).test(this.__value__)`
   end
   
   # FIX: Incomplete
@@ -5628,7 +5628,7 @@ class String
   
   # FIX: Incomplete
   def inspect
-    `$q('"'+this._value.replace(/\\\\/g,'\\\\\\\\').replace(/"/g,'\\\\"')+'"')`
+    `$q('"'+this.__value__.replace(/\\\\/g,'\\\\\\\\').replace(/"/g,'\\\\"')+'"')`
   end
   
   # call-seq:
@@ -5641,7 +5641,7 @@ class String
   #   'abcdef'.intern   #=> :abcdef
   # 
   def intern
-    `$s(this._value)`
+    `$s(this.__value__)`
   end
   
   # call-seq:
@@ -5654,7 +5654,7 @@ class String
   #   'ab\ncd'.length   #=> 5
   # 
   def length
-    `this._value.length`
+    `this.__value__.length`
   end
   
   # FIX: Incomplete
@@ -5670,7 +5670,7 @@ class String
   #   '\tabcdef'.lstrip   #=> "abcdef"
   # 
   def lstrip
-    `$q(this._value.replace(/^\\s*/,''))`
+    `$q(this.__value__.replace(/^\\s*/,''))`
   end
   
   # call-seq:
@@ -5686,9 +5686,9 @@ class String
   #   s           #=> "abcdef"
   # 
   def lstrip!
-    `var v=this._value`
-    `this._value=v.replace(/^\\s*/,'')`
-    return `this._value==v?nil:this`
+    `var v=this.__value__`
+    `this.__value__=v.replace(/^\\s*/,'')`
+    return `this.__value__==v?nil:this`
   end
   
   # call-seq:
@@ -5703,7 +5703,7 @@ class String
   #   'abcdee'.match('xx')          #=> nil
   # 
   def match(pattern)
-    `$r(pattern._source||pattern._value,pattern._options).m$match(this)`
+    `$r(pattern.__source__||pattern.__value__,pattern.__options__).m$match(this)`
   end
   
   # call-seq:
@@ -5727,7 +5727,7 @@ class String
   #   'ZZZ9999'.next    #=> 'AAAA0000'
   # 
   def next
-    `var v=this._value`
+    `var v=this.__value__`
     `if(!/[a-zA-Z0-9]/.test(v)){return $q(v);}`
     `if(/^\\d+$/.test(v)){return $q(''+(+v+1))}`
     `for(var i=v.length-1,carry=i>=0,result='';i>=0;--i){var c=v[i],lc=/[a-z]/.test(c),uc=/[A-Z]/.test(c),n=/[0-9]/.test(c);if($T(carry)&&(lc||uc||n)){if(lc||uc){if(c=='z'||c=='Z'){result=(lc?'a':'A')+result;carry=i;}else{result=String.fromCharCode(c.charCodeAt()+1)+result;carry=false;};}else{if(c=='9'){result='0'+result;carry=i}else{result=''+(+c+1)+result;carry=false;};};}else{result=c+result;};}`
@@ -5743,12 +5743,12 @@ class String
   # <tt>String#next</tt> for details.
   # 
   def next!
-    `var v=this._value`
+    `var v=this.__value__`
     `if(!/[a-zA-Z0-9]/.test(v)){return $q(v);}`
     `if(/^\\d+$/.test(v)){return $q(''+(+v+1))}`
     `for(var i=v.length-1,carry=i>=0,result='';i>=0;--i){var c=v[i],lc=/[a-z]/.test(c),uc=/[A-Z]/.test(c),n=/[0-9]/.test(c);if($T(carry)&&(lc||uc||n)){if(lc||uc){if(c=='z'||c=='Z'){result=(lc?'a':'A')+result;carry=i;}else{result=String.fromCharCode(c.charCodeAt()+1)+result;carry=false;};}else{if(c=='9'){result='0'+result;carry=i}else{result=''+(+c+1)+result;carry=false;};};}else{result=c+result;};}`
     `if($T(carry)){var c=v[carry],insert=/[a-z]/.test(c)?'a':(/[A-Z]/.test(c)?'A':'1');result=result.slice(0,carry)+insert+result.slice(carry,result.length);}`
-    `this._value=result`
+    `this.__value__=result`
     return self
   end
   
@@ -5765,7 +5765,7 @@ class String
   #   'abcdef'.hex    #=> 0
   # 
   def oct
-    `var result=parseInt(this._value,8)`
+    `var result=parseInt(this.__value__,8)`
     return `result.toString()=='NaN'?0:result`
   end
   
@@ -5780,7 +5780,7 @@ class String
   #   s                   #=> "def"
   # 
   def replace(str)
-    `this._value=str._value`
+    `this.__value__=str.__value__`
   end
   
   # call-seq:
@@ -5791,7 +5791,7 @@ class String
   #   'abcdef'.reverse    #=> 'fedcba'
   # 
   def reverse
-    `$q(this._value.split('').reverse().join(''))`
+    `$q(this.__value__.split('').reverse().join(''))`
   end
   
   # call-seq:
@@ -5805,7 +5805,7 @@ class String
   #   s             #=> 'fedcba'
   # 
   def reverse!
-    `this._value=this._value.split('').reverse().join('')`
+    `this.__value__=this.__value__.split('').reverse().join('')`
     return self
   end
   
@@ -5826,7 +5826,7 @@ class String
   #   'abcdef\r\n'.rstrip   #=> "abcdef"
   # 
   def rstrip
-    `$q(this._value.replace(/\\s*$/,''))`
+    `$q(this.__value__.replace(/\\s*$/,''))`
   end
   
   # call-seq:
@@ -5842,9 +5842,9 @@ class String
   #   s           #=> "abcdef"
   # 
   def rstrip!
-    `var v=this._value`
-    `this._value=v.replace(/\\s*$/,'')`
-    return `this._value==v?nil:this`
+    `var v=this.__value__`
+    `this.__value__=v.replace(/\\s*$/,'')`
+    return `this.__value__==v?nil:this`
   end
   
   # FIX: Incomplete
@@ -5861,7 +5861,7 @@ class String
   #   'ab\ncd'.size   #=> 5
   # 
   def size
-    `this._value.length`
+    `this.__value__.length`
   end
   
   # call-seq:
@@ -5895,7 +5895,7 @@ class String
   
   # FIX: Incomplete
   def split(pattern = /\s+/, limit = nil)
-    `var a=this._value.split(pattern._value),result=[]`
+    `var a=this.__value__.split(pattern.__value__),result=[]`
     `for(var i=0,l=a.length;i<l;++i){result.push($q(a[i]));}`
     return `result`
   end
@@ -5913,7 +5913,7 @@ class String
   #   '\tabcdef\r\n'.strip    #=> "abcdef"
   # 
   def strip
-    `$q(this._value.replace(/^\\s*|\\s*$/,''))`
+    `$q(this.__value__.replace(/^\\s*|\\s*$/,''))`
   end
   
   # call-seq:
@@ -5929,9 +5929,9 @@ class String
   #   s           #=> "abcdef"
   # 
   def strip!
-    `var v=this._value`
-    `this._value=v.replace(/^\\s*|\\s*$/,'')`
-    return `this._value==v?nil:this`
+    `var v=this.__value__`
+    `this.__value__=v.replace(/^\\s*|\\s*$/,'')`
+    return `this.__value__==v?nil:this`
   end
   
   # FIX: Incomplete
@@ -5963,7 +5963,7 @@ class String
   #   'ZZZ9999'.succ    #=> 'AAAA0000'
   # 
   def succ
-    `var v=this._value`
+    `var v=this.__value__`
     `if(!/[a-zA-Z0-9]/.test(v)){return $q(v);}`
     `if(/^\\d+$/.test(v)){return $q(''+(+v+1))}`
     `for(var i=v.length-1,carry=i>=0,result='';i>=0;--i){var c=v[i],lc=/[a-z]/.test(c),uc=/[A-Z]/.test(c),n=/[0-9]/.test(c);if($T(carry)&&(lc||uc||n)){if(lc||uc){if(c=='z'||c=='Z'){result=(lc?'a':'A')+result;carry=i;}else{result=String.fromCharCode(c.charCodeAt()+1)+result;carry=false;};}else{if(c=='9'){result='0'+result;carry=i}else{result=''+(+c+1)+result;carry=false;};};}else{result=c+result;};}`
@@ -5979,12 +5979,12 @@ class String
   # <tt>String#next</tt> for details.
   # 
   def succ!
-    `var v=this._value`
+    `var v=this.__value__`
     `if(!/[a-zA-Z0-9]/.test(v)){return $q(v);}`
     `if(/^\\d+$/.test(v)){return $q(''+(+v+1))}`
     `for(var i=v.length-1,carry=i>=0,result='';i>=0;--i){var c=v[i],lc=/[a-z]/.test(c),uc=/[A-Z]/.test(c),n=/[0-9]/.test(c);if($T(carry)&&(lc||uc||n)){if(lc||uc){if(c=='z'||c=='Z'){result=(lc?'a':'A')+result;carry=i;}else{result=String.fromCharCode(c.charCodeAt()+1)+result;carry=false;};}else{if(c=='9'){result='0'+result;carry=i}else{result=''+(+c+1)+result;carry=false;};};}else{result=c+result;};}`
     `if($T(carry)){var c=v[carry],insert=/[a-z]/.test(c)?'a':(/[A-Z]/.test(c)?'A':'1');result=result.slice(0,carry)+insert+result.slice(carry,result.length);}`
-    `this._value=result`
+    `this.__value__=result`
     return self
   end
   
@@ -6001,7 +6001,7 @@ class String
   #   'aBc123'.swapcase   #=> "AbC123"
   # 
   def swapcase
-    `$q(this._value.replace(/([a-z]+)|([A-Z]+)/g,function($0,$1,$2){return $1?$0.toUpperCase():$0.toLowerCase();}))`
+    `$q(this.__value__.replace(/([a-z]+)|([A-Z]+)/g,function($0,$1,$2){return $1?$0.toUpperCase():$0.toLowerCase();}))`
   end
   
   # call-seq:
@@ -6020,9 +6020,9 @@ class String
   #   s2              #=> "123"
   # 
   def swapcase!
-    `var v=this._value`
-    `this._value=v.replace(/([a-z]+)|([A-Z]+)/g,function($0,$1,$2){return $1?$0.toUpperCase():$0.toLowerCase();})`
-    return `this._value==v?nil:this`
+    `var v=this.__value__`
+    `this.__value__=v.replace(/([a-z]+)|([A-Z]+)/g,function($0,$1,$2){return $1?$0.toUpperCase():$0.toLowerCase();})`
+    return `this.__value__==v?nil:this`
   end
   
   # call-seq:
@@ -6093,7 +6093,7 @@ class String
   #   'abcdef'.to_sym   #=> :abcdef
   # 
   def to_sym
-    `$s(this._value)`
+    `$s(this.__value__)`
   end
   
   # FIX: Incomplete
@@ -6121,7 +6121,7 @@ class String
   #   'aBCDEf'.upcase   #=> "ABCDEF"
   # 
   def upcase
-    `$q(this._value.toUpperCase())`
+    `$q(this.__value__.toUpperCase())`
   end
   
   # call-seq:
@@ -6137,9 +6137,9 @@ class String
   #   s           #=> "ABCDEF"
   # 
   def upcase!
-    `var v=this._value`
-    `this._value=v.toUpperCase()`
-    return `v==this._value?nil:this`
+    `var v=this.__value__`
+    `this.__value__=v.toUpperCase()`
+    return `v==this.__value__?nil:this`
   end
   
   # FIX: Incomplete
@@ -6183,17 +6183,17 @@ class Symbol
   # 
   def self.all_symbols
     `var result=[]`
-    `for(var x in c$Symbol._table){if(c$Symbol._table[x].m$class()==c$Symbol){result.push(c$Symbol._table[x]);}}`
+    `for(var x in c$Symbol.__table__){if(c$Symbol.__table__[x].m$class()==c$Symbol){result.push(c$Symbol.__table__[x]);}}`
     return `result`
   end
   
   def initialize(value) # :nodoc:
-    `this._value=value`
-    `c$Symbol._table[value]=this`
+    `this.__value__=value`
+    `c$Symbol.__table__[value]=this`
   end
   
   def hash # :nodoc:
-    `'s_'+this._value`
+    `'s_'+this.__value__`
   end
   
   # call-seq:
@@ -6205,7 +6205,7 @@ class Symbol
   #   :foo.id2name    #=> "foo"
   # 
   def id2name
-    `$q(this._value)`
+    `$q(this.__value__)`
   end
   
   # call-seq:
@@ -6240,7 +6240,7 @@ class Symbol
   #   :foo.to_s   #=> "foo"
   # 
   def to_s
-    `$q(this._value)`
+    `$q(this.__value__)`
   end
   
   # call-seq:
@@ -6253,7 +6253,7 @@ class Symbol
     return self
   end
   
-  `c$Symbol._table=new(Object)`
+  `c$Symbol.__table__=new(Object)`
   
   undef dup
   undef clone
@@ -6276,7 +6276,7 @@ class Time
   # 
   def self.at(seconds,milliseconds)
     `var t=c$Time.m$new()`
-    `t._value=typeof(seconds)=='number'?new(Date)(seconds*1000+(milliseconds||0)):seconds._value`
+    `t.__value__=typeof(seconds)=='number'?new(Date)(seconds*1000+(milliseconds||0)):seconds.__value__`
     return `t`
   end
   
@@ -6311,7 +6311,7 @@ class Time
   #   t2.to_f         #=> 1222222222.991
   # 
   def initialize
-    `this._value=new(Date)`
+    `this.__value__=new(Date)`
   end
   
   # call-seq:
@@ -6325,7 +6325,7 @@ class Time
   # 
   def +(numeric)
     `var t=c$Time.m$new()`
-    `t._value=new(Date)(numeric*1000+this._value.valueOf())`
+    `t.__value__=new(Date)(numeric*1000+this.__value__.valueOf())`
     return `t`
   end
   
@@ -6343,7 +6343,7 @@ class Time
   #   t2 - 2592000       #=> Tue Sep 23 2008 22:10:22 GMT-0400 (EDT)
   # 
   def -(time)
-    `typeof(time)=='number'?new(Date)(this._value.valueOf()-(time*1000)):(this._value.valueOf()-time._value.valueOf())/1000`
+    `typeof(time)=='number'?new(Date)(this.__value__.valueOf()-(time*1000)):(this.__value__.valueOf()-time.__value__.valueOf())/1000`
   end
   
   # call-seq:
@@ -6360,7 +6360,7 @@ class Time
   #   t1 <=> t1           #=> 0
   # 
   def <=>(time)
-    `var v=this._value.valueOf(),ms=typeof(time)=='number'?time*1000:time._value.valueOf()`
+    `var v=this.__value__.valueOf(),ms=typeof(time)=='number'?time*1000:time.__value__.valueOf()`
     `if(v<ms){return -1;}`
     `if(v==ms){return 0;}`
     `if(v>ms){return 1;}`
@@ -6377,7 +6377,7 @@ class Time
   #   t.day           #=> 23
   # 
   def day
-    `this._value.getDate()`
+    `this.__value__.getDate()`
   end
   
   # FIX: Incomplete
@@ -6392,7 +6392,7 @@ class Time
   # 
   def eql?(time)
     `if(time.constructor!=c$Time){return false;}`
-    `this._value.valueOf()==time._value.valueOf()`
+    `this.__value__.valueOf()==time.__value__.valueOf()`
   end
   
   # FIX: Incomplete
@@ -6422,7 +6422,7 @@ class Time
   #   t.gmt_offset    #=> -14400
   # 
   def gmt_offset
-    `this._value.getTimezoneOffset() * -60`
+    `this.__value__.getTimezoneOffset() * -60`
   end
   
   # FIX: Incomplete
@@ -6440,11 +6440,11 @@ class Time
   #   t.gmtoff        #=> -14400
   # 
   def gmtoff
-    `this._value.getTimezoneOffset() * -60`
+    `this.__value__.getTimezoneOffset() * -60`
   end
   
   def hash # :nodoc:
-    `'t_'+this._value.valueOf()/1000`
+    `'t_'+this.__value__.valueOf()/1000`
   end
   
   # call-seq:
@@ -6456,7 +6456,7 @@ class Time
   #    t.hour         #=> 22
   # 
   def hour
-    `this._value.getHours()`
+    `this.__value__.getHours()`
   end
   
   # call-seq:
@@ -6489,7 +6489,7 @@ class Time
   #   t.mday          #=> 23
   # 
   def mday
-    `this._value.getDate()`
+    `this.__value__.getDate()`
   end
   
   # call-seq:
@@ -6501,7 +6501,7 @@ class Time
   #   t.min           #=> 10
   # 
   def min
-    `this._value.getMinutes()`
+    `this.__value__.getMinutes()`
   end
   
   # call-seq:
@@ -6514,7 +6514,7 @@ class Time
   #   t.mon           #=> 9
   # 
   def mon
-    `this._value.getMonth()`
+    `this.__value__.getMonth()`
   end
   
   # call-seq:
@@ -6527,7 +6527,7 @@ class Time
   #   t.month         #=> 9
   # 
   def month
-    `this._value.getMonth()`
+    `this.__value__.getMonth()`
   end
   
   # call-seq:
@@ -6539,7 +6539,7 @@ class Time
   #   t.sec           #=> 22
   # 
   def sec
-    `this._value.getSeconds()`
+    `this.__value__.getSeconds()`
   end
   
   # FIX: Incomplete
@@ -6553,7 +6553,7 @@ class Time
   # 
   def succ
     `var t=c$Time.m$new()`
-    `t._value=new(Date)(1000+this._value.valueOf())`
+    `t.__value__=new(Date)(1000+this.__value__.valueOf())`
     return `t`
   end
   
@@ -6583,7 +6583,7 @@ class Time
   #   t.to_f          #=> 1222222222.989
   # 
   def to_f
-    `this._value.valueOf()/1000`
+    `this.__value__.valueOf()/1000`
   end
   
   # call-seq:
@@ -6595,7 +6595,7 @@ class Time
   #   t.to_i          #=> 1222222222
   # 
   def to_i
-    `parseInt(this._value.valueOf()/1000)`
+    `parseInt(this.__value__.valueOf()/1000)`
   end
   
   # call-seq:
@@ -6607,7 +6607,7 @@ class Time
   #   Time.now.to_s   #=> "Tue Sep 23 2008 22:10:22 GMT-0400 (EDT)"
   # 
   def to_s
-    `$q(''+this._value)`
+    `$q(''+this.__value__)`
   end
   
   # call-seq:
@@ -6619,7 +6619,7 @@ class Time
   #   t.tv_sec        #=> 1222222222
   # 
   def tv_sec
-    `parseInt(this._value.valueOf()/1000)`
+    `parseInt(this.__value__.valueOf()/1000)`
   end
   
   # call-seq:
@@ -6633,7 +6633,7 @@ class Time
   #   t.tv_usec       #=> 989000
   # 
   def tv_usec
-    `parseInt(this._value.valueOf()/1000)`
+    `parseInt(this.__value__.valueOf()/1000)`
   end
   
   # call-seq:
@@ -6647,7 +6647,7 @@ class Time
   #   t.usec          #=> 989000
   # 
   def usec
-    `var v = this._value.valueOf()`
+    `var v = this.__value__.valueOf()`
     `(v*1000)-parseInt(v/1000)*1000000`
   end
   
@@ -6670,7 +6670,7 @@ class Time
   #   t.utc_offset    #=> -14400
   # 
   def utc_offset
-    `this._value.getTimezoneOffset() * -60`
+    `this.__value__.getTimezoneOffset() * -60`
   end
   
   # call-seq:
@@ -6682,7 +6682,7 @@ class Time
   #   t.wday          #=> 2
   # 
   def wday
-    `this._value.getDay()`
+    `this.__value__.getDay()`
   end
   
   # call-seq:
@@ -6707,7 +6707,7 @@ class Time
   #   t.year          #=> 2008
   # 
   def year
-    `this._value.getFullYear()`
+    `this.__value__.getFullYear()`
   end
   
   # FIX: Incomplete
@@ -6775,10 +6775,10 @@ end
 `
 
 c$NilClass.prototype.toString=function(){return 'nil';};
-c$Range.prototype.toString=function(){return ''+this._start+(this._exclusive?'...':'..')+this._end;};
-c$Regexp.prototype.toString=function(){return '/'+this._source+'/'+(/s/.test(this._options)?'m':'')+(/i/.test(this._options)?'i':'')+(/x/.test(this._options)?'x':'');};
-c$String.prototype.toString=function(){return this._value;};
-c$Symbol.prototype.toString=function(){var v=this._value,str=/\\s/.test(v)?'"'+v+'"':v;return ':'+str ;};
-c$Time.prototype.toString=function(){return ''+this._value;};
+c$Range.prototype.toString=function(){return ''+this.__start__+(this.__exclusive__?'...':'..')+this.__end__;};
+c$Regexp.prototype.toString=function(){return '/'+this.__source__+'/'+(/s/.test(this.__options__)?'m':'')+(/i/.test(this.__options__)?'i':'')+(/x/.test(this.__options__)?'x':'');};
+c$String.prototype.toString=function(){return this.__value__;};
+c$Symbol.prototype.toString=function(){var v=this.__value__,str=/\\s/.test(v)?'"'+v+'"':v;return ':'+str ;};
+c$Time.prototype.toString=function(){return ''+this.__value__;};
 
 `
