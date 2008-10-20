@@ -1758,7 +1758,7 @@ class Array
   #   [1,2,3] * 3     #=> [1, 2, 3, 1, 2, 3, 1, 2, 3]
   # 
   def *(arg)
-    `if(arg.m$class()==c$String){return this.join(arg);}`
+    `if(arg.m$class()==c$String){return $q(this.join(arg));}`
     `var result=[],i=0,l=parseInt(arg)`
     `while(i<l){result=result.concat(this);i++;}`
     return `result`
