@@ -46,10 +46,14 @@ module Red
         def initialize(expression_a_sexp, expression_b_sexp, options)
           a = expression_a_sexp.red!(:as_argument => true)
           b = expression_b_sexp.red!(:as_argument => true)
+          self << self.class.string % [a, b]
+        end
+        
+        def self.string # :nodoc:
+          a = @@red_boolean.succ!.dup
+          b = @@red_boolean.succ!.dup
           c = @@red_boolean.succ!.dup
-          d = @@red_boolean.succ!.dup
-          e = @@red_boolean.succ!.dup
-          self << "(($.%s=$T(%s))?(($.%s=$T($.%s=%s))?$.%s:$.%s):$.%s)" % [c, a, e, d, b, d, e, c]
+          "(($.%s=$T(%s))?(($.%s=$T($.%s=%s))?$.%s:$.%s):$.%s)" % [a, '%s', c, b, '%s', b, c, a]
         end
       end
       
@@ -58,8 +62,12 @@ module Red
         def initialize(expression_a_sexp, expression_b_sexp, options)
           a = expression_a_sexp.red!(:as_argument => true)
           b = expression_b_sexp.red!(:as_argument => true)
-          c = @@red_boolean.succ!.dup
-          self << "($T($.%s=%s)?$.%s:%s)" % [c, a, c, b]
+          self << self.class.string % [a, b]
+        end
+        
+        def self.string
+          a = @@red_boolean.succ!.dup
+          "($T($.%s=%s)?$.%s:%s)" % [a, '%s', a, '%s']
         end
       end
     end

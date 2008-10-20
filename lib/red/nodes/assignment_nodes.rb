@@ -46,8 +46,9 @@ module Red
       def initialize(variable_name_sexp, expression_sexp, options)
         variable_name = variable_name_sexp.red!
         expression    = expression_sexp.red!(:as_assignment => true)
+        a             = @@red_boolean.succ!.dup
         if options[:as_argument_default]
-          self << "%s=$T(_a=%s)?_a:%s" % [variable_name, variable_name, expression]
+          self << "%s=$T($.%s=%s)?$.%s:%s" % [variable_name, a, variable_name, a, expression]
         else
           self << "%s=%s" % [variable_name, expression]
         end
@@ -82,7 +83,7 @@ module Red
           method     = (METHOD_ESCAPE[method_sexp] || method_sexp).red!
           expression = expression_sexp.red!(:as_argument => true)
           object     = "%s.m$_brac(%s)" % [receiver, arguments]
-          unless string = ((method == '||' && LogicNode::Conjunction::Or::STRING) || (method == '&&' && LogicNode::Conjunction::And::STRING))
+          unless string = ((method == '||' && LogicNode::Conjunction::Or.string) || (method == '&&' && LogicNode::Conjunction::And.string))
             operation = "%s.m$%s(%s)" % [object, method, expression]
           else
             operation = string % [object, expression]
@@ -100,7 +101,7 @@ module Red
           method     = (METHOD_ESCAPE[method_sexp] || method_sexp).red!
           expression = expression_sexp.red!(:as_argument => true)
           object     = "%s.m$%s()" % [receiver, reader]
-          unless string = ((method == '||' && LogicNode::Conjunction::Or::STRING) || (method == '&&' && LogicNode::Conjunction::And::STRING))
+          unless string = ((method == '||' && LogicNode::Conjunction::Or.string) || (method == '&&' && LogicNode::Conjunction::And.string))
             operation = "%s.m$%s(%s)" % [object, method, expression]
           else
             operation = string % [object, expression]
@@ -114,7 +115,7 @@ module Red
         def initialize(variable_name_sexp, assignment_sexp, options)
           variable_name = variable_name_sexp.red!
           expression    = assignment_sexp.last.red!(:as_argument => true)
-          conjunction   = LogicNode::Conjunction::Or::STRING % [variable_name, expression]
+          conjunction   = LogicNode::Conjunction::Or.string % [variable_name, expression]
           self << "%s=%s" % [variable_name, conjunction]
         end
       end
@@ -124,7 +125,7 @@ module Red
         def initialize(variable_name_sexp, assignment_sexp, options)
           variable_name = variable_name_sexp.red!
           expression    = assignment_sexp.last.red!(:as_argument => true)
-          conjunction   = LogicNode::Conjunction::And::STRING % [variable_name, expression]
+          conjunction   = LogicNode::Conjunction::And.string % [variable_name, expression]
           self << "%s=%s" % [variable_name, conjunction]
         end
       end
