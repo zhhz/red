@@ -219,7 +219,7 @@ module Red # :nodoc:
     @@red_singleton   = nil
     @@red_block_arg   = nil
     @@red_import      = false
-    @@red_boolean     = 'a'
+    @@red_boolean     = '`'
     return true
   end
   

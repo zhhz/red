@@ -46,11 +46,10 @@ module Red
         def initialize(expression_a_sexp, expression_b_sexp, options)
           a = expression_a_sexp.red!(:as_argument => true)
           b = expression_b_sexp.red!(:as_argument => true)
+          c = @@red_boolean.succ!.dup
           d = @@red_boolean.succ!.dup
           e = @@red_boolean.succ!.dup
-          f = @@red_boolean.succ!.dup
-          string = "($.%s=$T(%s)?($.%s=$T($.%s=%s)?$.%s:$.%s):$.%s)" % [d, '%s', f, e, '%s', e, f, d]
-          self << string % [a,b]
+          self << "(($.%s=$T(%s))?(($.%s=$T($.%s=%s))?$.%s:$.%s):$.%s)" % [c, a, e, d, b, d, e, c]
         end
       end
       
@@ -60,8 +59,7 @@ module Red
           a = expression_a_sexp.red!(:as_argument => true)
           b = expression_b_sexp.red!(:as_argument => true)
           c = @@red_boolean.succ!.dup
-          string = "($T($.%s=%s)?$.%s:%s)" % [c, '%s', c, '%s']
-          self << string % [a,b]
+          self << "($T($.%s=%s)?$.%s:%s)" % [c, a, c, b]
         end
       end
     end
