@@ -125,7 +125,7 @@ c$Module = function(){this.__id__=Red.id++};c$Module.__name__='Module';c$Module.
 c$Object = function(){this.__id__=Red.id++};c$Object.__name__='Object';c$Object.__children__={};c$Module.__superclass__=c$Object;
 
 c$Object.prototype.toString=function(){return '#<'+this.m$class().__name__.replace(/\\./g,'::')+':0x'+(this.__id__*999^4000000).toString(16)+'>'};
-Function.prototype.m$=function(o){var f=this;var p=function(){return f.apply(o,arguments);};p.__arity__=f.arity;p.__id__=Red.id++;return p;};
+Function.prototype.m$=function(o){var f=this;var p=function(){return f.apply(o,arguments);};p.__unbound__=f;p.__arity__=f.arity;p.__id__=Red.id++;return p;};
 window.__name__='window';
 window.prototype=window;
 window.__children__={'Object':true};
@@ -1318,8 +1318,9 @@ module Kernel
   # 
   # FIX: Incomplete
   def lambda(func)
-    `result=new(c$Proc)()`
+    `var result=new(c$Proc)()`
     `result.__block__=func`
+    `result.__block__.__id__=Red.id++`
     return `result`
   end
   
@@ -1358,8 +1359,9 @@ module Kernel
   # 
   # FIX: Incomplete
   def proc(func)
-    `result=new(c$Proc)()`
+    `var result=new(c$Proc)()`
     `result.__block__=func`
+    `result.__block__.__id__=Red.id++`
     return `result`
   end
   
@@ -2062,7 +2064,7 @@ class Array
   def delete(obj)
     `for(var i=0,l=this.length,temp=[];i<l;++i){if(!(this[i].m$_eql2(obj))){temp.push(this[i]);};}`
     `this._replace(temp)`
-    return `l===this.length?(blockGivenBool?#{yield}:nil):obj`
+    return `l===this.length?(#{block_given?}?#{yield}:nil):obj`
   end
   
   # call-seq:
@@ -2273,7 +2275,7 @@ class Array
   # 
   def flatten!
     `for(var i=0,l=this.length,result=[];i<l;++i){if(this[i].m$class()==c$Array){result=result.concat(this[i].m$flattenBang());}else{result.push(this[i]);};}`
-    return `this.length==result.length?nil:this._replace(result)`
+    return `l==result.length?nil:this._replace(result)`
   end
   
   def hash # :nodoc:
@@ -4702,10 +4704,18 @@ class Proc
   # 
   def initialize(func)
     `this.__block__=func`
+    `this.__block__.__id__=func.__id__||Red.id++`
+    `this.__id__=this.__block__.__id__`
   end
   
-  # FIX: Incomplete
-  def ==
+  # call-seq:
+  #   prc == other => true or false
+  # 
+  # Returns +true+ if _prc_ and _other_ are the same object, +false+
+  # otherwise.
+  # 
+  def ==(other)
+    `this.__id__==other.__id__`
   end
   
   # call-seq:
