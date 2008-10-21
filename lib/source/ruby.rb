@@ -2561,7 +2561,8 @@ class Array
   #   a           #=> [1, 2, 3, 4, 5]
   # 
   def reverse
-    `this.reverse()`
+    `for(var i=this.length,result=[];i>0;){result.push(this[--i]);}`
+    return `result`
   end
   
   # call-seq:
@@ -2575,8 +2576,7 @@ class Array
   #   a             #=> [5, 4, 3, 2, 1]
   # 
   def reverse!
-    `for(var i=0,l=this.length,last=l-1;i<l;++i){j=last-i;if(i>=j){break;};this._swap(i,j);}`
-    return self
+    `this.reverse()`
   end
   
   # call-seq:
