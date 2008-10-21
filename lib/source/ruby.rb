@@ -1920,7 +1920,7 @@ class Array
   end
   
   def __id__ # :nodoc:
-    `this.__id__||this.__id__=Red.id++`
+    `this.__id__||(this.__id__=Red.id++)`
   end
   
   # call-seq:
@@ -2449,7 +2449,7 @@ class Array
   end
   
   def object_id # :nodoc:
-    `this.__id__||this.__id__=Red.id++`
+    `this.__id__||(this.__id__=Red.id++)`
   end
   
   # call-seq:
