@@ -1919,6 +1919,10 @@ class Array
     return `object`
   end
   
+  def __id__ # :nodoc:
+    `this.__id__||this.__id__=Red.id++`
+  end
+  
   # call-seq:
   #   ary.assoc(obj) -> array or nil
   # 
@@ -2167,6 +2171,11 @@ class Array
     `if(ary.m$class()!==c$Array||ary.length!==this.length){return false;}`
     `for(var i=0,l=this.length;i<l;++i){if(!(this[i].m$eqlBool(ary[i]))){return false;};}`
     return true
+  end
+  
+  def equal?(ary) # :nodoc:
+    `var thisId=this.__id__||(this.__id__=Red.id++),aryId=ary.__id__||(ary.__id__=Red.id++)`
+    `thisId==aryId`
   end
   
   # call-seq:
@@ -2437,6 +2446,10 @@ class Array
   def nitems
     `for(var i=0,l=this.length,result=0;i<l;++i){if(this[i]!==nil){result++;};}`
     return `result`
+  end
+  
+  def object_id # :nodoc:
+    `this.__id__||this.__id__=Red.id++`
   end
   
   # call-seq:
