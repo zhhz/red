@@ -2274,7 +2274,8 @@ class Array
   #   a.flatten!   #=> nil
   # 
   def flatten!
-    `for(var i=0,l=this.length,result=[];i<l;++i){if(this[i].m$class()==c$Array){result=result.concat(this[i].m$flattenBang());}else{result.push(this[i]);};}`
+    `var flatten=function(ary){for(var i=0,l=ary.length,result=[];i<l;++i){if(ary[i].m$class()==c$Array){result=result.concat(ary[i].m$flatten());}else{result.push(ary[i]);};};return result;}`
+    `for(var i=0,l=this.length,result=[];i<l;++i){if(this[i].m$class()==c$Array){result=result.concat(flatten(this[i]));}else{result.push(this[i]);};}`
     return `l==result.length?nil:this._replace(result)`
   end
   
